@@ -394,29 +394,7 @@
                     this.data = await r.json();
                     this.teams = this.data.teams;
                     this._rng = this.mulberry32(this.data.seed || 0);
-                    const sim = this.data.simulation;
-                    if (sim) {
-                        this.N = sim.N || 10000;
-                        this.stats = sim.team_stats;
-                        this.matchStatsMap = sim.match_stats;
-                        this.knockoutStats = sim.knockout_stats;
-                        this.lastBrackets = sim.knockout_bracket;
-                        const teamGroups = {};
-                        for (const [g, gd] of Object.entries(this.data.groups)) {
-                            for (const team of gd.teams) teamGroups[team] = g;
-                        }
-                        this.qualProbs = Object.entries(this.stats).map(([team, s]) => ({ team, group: teamGroups[team] || '?', elo: this.teams[team]?.elo||0, ...s })).sort((a, b) => b.champion - a.champion);
-                        const thirds = [];
-                        for (const g of this.groupLetters) {
-                            const rows = this.expectedGroup(g);
-                            if (rows[2]) thirds.push({ ...rows[2], group: g });
-                        }
-                        thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
-                        this.expectedThirds = thirds.slice(0, 8);
-                        this.done = true;
-                    } else {
-                        this.run();
-                    }
+                    this.run();
                 } catch (e) {
                     alert('Failed to load data — run uv run build_data.py first.');
                 }
