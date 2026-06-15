@@ -940,7 +940,16 @@
                 const title = type === 'qualify' ? 'Qualify Probability Over Time' : 'Champion Probability Over Time';
                 const yLabel = type === 'qualify' ? 'Qualify (%)' : 'Champion (%)';
                 const shortDates = history.dates.map(d => d.startsWith('2026-') ? d.slice(5) : d);
-                let def = 'xychart-beta\n  title "' + title + '"\n  x-axis "Date" ' + JSON.stringify(shortDates) + '\n  y-axis "' + yLabel + '" 0 --> 100\n';
+                let yMax = 100;
+                if (type === 'win') {
+                    let mx = 0;
+                    for (const team of teams) {
+                        const vals = history.win[team];
+                        if (vals) mx = Math.max(mx, ...vals);
+                    }
+                    yMax = Math.ceil(mx * 1.15 / 5) * 5 || 5;
+                }
+                let def = 'xychart-beta\n  title "' + title + '"\n  x-axis "Date" ' + JSON.stringify(shortDates) + '\n  y-axis "' + yLabel + '" 0 --> ' + yMax + '\n';
                 for (const team of teams) {
                     const vals = type === 'qualify' ? history.qualify[team] : history.win[team];
                     if (!vals) continue;
