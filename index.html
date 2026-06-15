@@ -1553,6 +1553,33 @@
                         return this.sortedQualProbs.slice(0, n).map((r) => r.team);
                     },
 
+                    async renderSankey(g) {
+                        await this.$nextTick();
+                        const el = this.$refs.sankeyBox;
+                        if (!el || !this.modalGroup) return;
+                        const teams = this.data?.groups?.[g]?.teams || [];
+                        const n = this.N || 1;
+                        const rows = ["sankey-beta"];
+                        for (const team of teams) {
+                            const s = this.stats[team];
+                            if (!s) continue;
+                            rows.push(team + ",1st," + Math.round(s.groupWinner * 100 / n));
+                            rows.push(team + ",2nd," + Math.round(s.groupRunnerUp * 100 / n));
+                            rows.push(team + ",3rd," + Math.round(s.groupThird * 100 / n));
+                            rows.push(team + ",4th," + Math.round(s.groupFourth * 100 / n));
+                        }
+                        el.innerHTML = "";
+                        try {
+                            const { svg } = await window.mermaidReady.render(
+                                "sankey-group-" + Date.now(),
+                                rows.join("\n"),
+                            );
+                            el.innerHTML = svg;
+                        } catch (e) {
+                            el.innerHTML = '<p style="color:#6b7280">Chart unavailable</p>';
+                        }
+                    },
+
                     renderProbChart(type) {
                         const el = type === "qualify"
                             ? this.$refs.qualifyChart
@@ -1857,6 +1884,7 @@
                                     setTimeout(() => {
                                         this.renderProbChart("qualify");
                                         this.renderProbChart("win");
+                                        if (this.modalGroup) this.renderSankey(this.modalGroup);
                                     }, 0);
                                 }
                             };
