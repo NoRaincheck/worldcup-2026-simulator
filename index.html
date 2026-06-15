@@ -498,7 +498,7 @@
                                 </thead>
                                 <tbody>
                                     <template
-                                        x-for="(row, ri) in expectedGroupFull(modalGroup)"
+                                        x-for="(row, ri) in expectedGroup(modalGroup)"
                                         :key="row.team"
                                     >
                                         <tr>
@@ -510,64 +510,14 @@
                                                 ></span>
                                             </td>
                                             <td class="team-cell" x-text="row.team"></td>
-                                            <td>
-                                                <span x-text="row.cur.p"></span><span
-                                                    class="delta"
-                                                    x-show="row.exp.p > 0"
-                                                    x-text="' (+' + row.exp.p.toFixed(1) + ')'"
-                                                ></span>
-                                            </td>
-                                            <td>
-                                                <span x-text="row.cur.w"></span><span
-                                                    class="delta"
-                                                    x-show="row.exp.w > 0"
-                                                    x-text="' (+' + row.exp.w.toFixed(1) + ')'"
-                                                ></span>
-                                            </td>
-                                            <td>
-                                                <span x-text="row.cur.d"></span><span
-                                                    class="delta"
-                                                    x-show="row.exp.d > 0"
-                                                    x-text="' (+' + row.exp.d.toFixed(1) + ')'"
-                                                ></span>
-                                            </td>
-                                            <td>
-                                                <span x-text="row.cur.l"></span><span
-                                                    class="delta"
-                                                    x-show="row.exp.l > 0"
-                                                    x-text="' (+' + row.exp.l.toFixed(1) + ')'"
-                                                ></span>
-                                            </td>
-                                            <td>
-                                                <span x-text="row.cur.gf"></span><span
-                                                    class="delta"
-                                                    x-show="row.exp.gf > 0"
-                                                    x-text="' (+' + row.exp.gf.toFixed(1) + ')'"
-                                                ></span>
-                                            </td>
-                                            <td>
-                                                <span x-text="row.cur.ga"></span><span
-                                                    class="delta"
-                                                    x-show="row.exp.ga > 0"
-                                                    x-text="' (+' + row.exp.ga.toFixed(1) + ')'"
-                                                ></span>
-                                            </td>
-                                            <td>
-                                                <span
-                                                    x-text="(row.cur.gd > 0 ? '+' : '') + row.cur.gd"
-                                                ></span><span
-                                                    class="delta"
-                                                    x-show="row.exp.gd !== 0"
-                                                    x-text="' (' + (row.exp.gd > 0 ? '+' : '') + row.exp.gd.toFixed(1) + ')'"
-                                                ></span>
-                                            </td>
-                                            <td class="pts-cell">
-                                                <span x-text="row.cur.pts"></span><span
-                                                    class="delta"
-                                                    x-show="row.exp.pts > 0"
-                                                    x-text="' (+' + row.exp.pts.toFixed(1) + ')'"
-                                                ></span>
-                                            </td>
+                                            <td x-text="row.p"></td>
+                                            <td x-text="row.w"></td>
+                                            <td x-text="row.d"></td>
+                                            <td x-text="row.l"></td>
+                                            <td x-text="row.gf"></td>
+                                            <td x-text="row.ga"></td>
+                                            <td x-text="(row.gd > 0 ? '+' : '') + row.gd"></td>
+                                            <td class="pts-cell" x-text="row.pts"></td>
                                         </tr>
                                     </template>
                                 </tbody>
