@@ -521,8 +521,10 @@
                 const homeElo = eloRatings?.[homeTeam] || this.teams[homeTeam]?.elo || 1500;
                 const awayElo = eloRatings?.[awayTeam] || this.teams[awayTeam]?.elo || 1500;
                 const mp = this.data.model_params;
-                const ha = isKnockout ? 0 : mp.home_advantage;
-                let eloDiff = homeElo - awayElo + ha;
+                const HOSTS = new Set(['Mexico', 'United States', 'Canada']);
+                let eloDiff = homeElo - awayElo;
+                if (HOSTS.has(homeTeam)) eloDiff += mp.home_advantage;
+                if (HOSTS.has(awayTeam)) eloDiff -= mp.home_advantage;
                 let lH = mp.base_rate * Math.exp(eloDiff / (2 * mp.scale));
                 let lA = mp.base_rate * Math.exp(-eloDiff / (2 * mp.scale));
                 lH = Math.max(0.1, Math.min(5, lH));

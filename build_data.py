@@ -30,6 +30,8 @@ GROUPS = {
 NAME_MAP = {"Czech Republic": "Czechia"}
 ELO_TO_FIXTURE = {v: k for k, v in NAME_MAP.items()}
 
+HOSTS = {"Mexico", "United States", "Canada"}
+
 KNOCKOUT_BRACKET = {
     "round_of_32": [
         ["1A", "3rd_1"], ["2C", "2F"], ["1B", "3rd_2"], ["1E", "2D"],
@@ -234,9 +236,13 @@ def elo_adjust(winner_elo, loser_elo, drawn=False, k=20):
         return k * (0.5 - expected)
     return k * (1 - expected)
 
-def sim_match(home_elo, away_elo, params, rng, knockout=False):
-    ha = 0 if knockout else params["home_advantage"]
-    elo_diff = home_elo - away_elo + ha
+def sim_match(home_elo, away_elo, params, rng, knockout=False, home_team=None, away_team=None):
+    elo_diff = home_elo - away_elo
+    ha = params["home_advantage"]
+    if home_team in HOSTS:
+        elo_diff += ha
+    if away_team in HOSTS:
+        elo_diff -= ha
     br = params["base_rate"]
     sc = params["scale"]
     lh = max(0.1, br * math.exp(elo_diff / (2 * sc)))
@@ -311,13 +317,13 @@ def sim_knockout(sorted_groups, bracket, elo_ratings, params, rng):
             if not home or not away:
                 b[rn].append({"home": home or "TBD", "away": away or "TBD", "winner": None, "hg": 0, "ag": 0})
                 continue
-            hg, ag = sim_match(elo_ratings[home], elo_ratings[away], params, rng, True)
+            hg, ag = sim_match(elo_ratings[home], elo_ratings[away], params, rng, True, home_team=home, away_team=away)
             apply_momentum(elo_ratings, home, away, hg, ag)
             b[rn].append({"home": home, "away": away, "winner": home if hg >= ag else away, "hg": hg, "ag": ag})
     sf = b.get("semi_finals", [])
     if len(sf) == 2 and sf[0]["winner"] and sf[1]["winner"]:
         h, a = sf[0]["winner"], sf[1]["winner"]
-        hg, ag = sim_match(elo_ratings[h], elo_ratings[a], params, rng, True)
+        hg, ag = sim_match(elo_ratings[h], elo_ratings[a], params, rng, True, home_team=h, away_team=a)
         apply_momentum(elo_ratings, h, a, hg, ag)
         b["final"] = [{"home": h, "away": a, "winner": h if hg >= ag else a, "hg": hg, "ag": ag}]
     else:
@@ -358,7 +364,7 @@ def run_simulation(data, n=10000):
                 if m.get("home_score") is not None:
                     hg, ag = m["home_score"], m["away_score"]
                 else:
-                    hg, ag = sim_match(elo_ratings[home], elo_ratings[away], params, rng)
+                    hg, ag = sim_match(elo_ratings[home], elo_ratings[away], params, rng, home_team=home, away_team=away)
                 apply_momentum(elo_ratings, home, away, hg, ag)
                 h, a = st[home], st[away]
                 h["p"] += 1; a["p"] += 1
