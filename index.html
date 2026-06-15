@@ -138,6 +138,17 @@
                 </tbody>
             </table>
         </div>
+
+        <div class="chart-grid">
+            <div class="chart-container">
+                <h2>Qualify Probability Over Time</h2>
+                <div class="mermaid-chart" x-ref="qualifyChart" x-effect="chartKey;renderProbChart('qualify')"></div>
+            </div>
+            <div class="chart-container">
+                <h2>Champion Probability Over Time</h2>
+                <div class="mermaid-chart" x-ref="winChart" x-effect="chartKey;renderProbChart('win')"></div>
+            </div>
+        </div>
     </section>
     </template>
 
@@ -908,6 +919,60 @@
                     .slice(0, 10);
             },
 
+            get probHistory() {
+                return this.data?.prob_history || { dates: [], qualify: {}, win: {} };
+            },
+
+            get chartKey() {
+                return this.qualSort + '|' + this.qualSortDesc + '|' + (this.qualFilter || '') + '|' + this.N;
+            },
+
+            topNTeams(n) {
+                return this.sortedQualProbs.slice(0, n).map(r => r.team);
+            },
+
+            renderProbChart(type) {
+                const el = type === 'qualify' ? this.$refs.qualifyChart : this.$refs.winChart;
+                if (!el || !this.probHistory.dates.length) return;
+                const teams = this.topNTeams(10);
+                if (!teams.length) return;
+                const history = this.probHistory;
+                const title = type === 'qualify' ? 'Qualify Probability Over Time' : 'Champion Probability Over Time';
+                const yLabel = type === 'qualify' ? 'Qualify (%)' : 'Champion (%)';
+                const shortDates = history.dates.map(d => d.startsWith('2026-') ? d.slice(5) : d);
+                let def = 'xychart-beta\n  title "' + title + '"\n  x-axis "Date" ' + JSON.stringify(shortDates) + '\n  y-axis "' + yLabel + '" 0 --> 100\n';
+                for (const team of teams) {
+                    const vals = type === 'qualify' ? history.qualify[team] : history.win[team];
+                    if (!vals) continue;
+                    def += '  line "' + team + '" ' + JSON.stringify(vals) + '\n';
+                }
+                el.innerHTML = '';
+                window.mermaidReady.render('chart-' + type + '-' + Date.now(), def)
+                    .then(({ svg }) => {
+                        el.innerHTML = svg;
+                        const svgEl = el.querySelector('svg[aria-roledescription="xychart"]');
+                        if (!svgEl) return;
+                        const groups = svgEl.querySelectorAll('g[class^="line-plot-"]');
+                        const colors = [];
+                        groups.forEach(g => {
+                            const path = g.querySelector('path');
+                            if (path) colors.push(path.getAttribute('stroke'));
+                        });
+                        const legend = document.createElement('div');
+                        legend.className = 'chart-legend';
+                        teams.forEach((t, i) => {
+                            const c = colors[i];
+                            if (!c) return;
+                            const item = document.createElement('span');
+                            item.className = 'legend-item';
+                            item.innerHTML = '<span class="legend-swatch" style="background:' + c + '"></span>' + t;
+                            legend.appendChild(item);
+                        });
+                        el.appendChild(legend);
+                    })
+                    .catch(() => { el.innerHTML = '<p style="color:#6b7280">Chart unavailable</p>'; });
+            },
+
             async renderKnockoutMermaid() {
                 await this.$nextTick();
                 const el = this.$refs.knockoutMermaid;
@@ -1056,6 +1121,7 @@
                             this.done = true;
                             this.running = false;
                             resolve();
+                            setTimeout(() => { this.renderProbChart('qualify'); this.renderProbChart('win'); }, 0);
                         }
                     };
                     batch();

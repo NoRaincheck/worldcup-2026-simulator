@@ -436,6 +436,75 @@ def run_simulation(data, n=10000):
     return {"N": n, "team_stats": team_stats, "match_stats": match_stats, "knockout_stats": ko_stats, "knockout_bracket": avg_ko}
 
 
+def compute_prob_history(data, played_results, n=10000):
+    """Compute per-date probability snapshots for qualify and win probabilities."""
+    if not played_results:
+        return {"dates": [], "qualify": {}, "win": {}}
+
+    dates = sorted(played_results.keys())
+
+    history = {
+        "dates": [],
+        "qualify": {t: [] for t in data["teams"]},
+        "win": {t: [] for t in data["teams"]},
+    }
+
+    # Baseline (no results played)
+    baseline = strip_played_results(data)
+    baseline["seed"] = 0
+    sim = run_simulation(baseline, n)
+    for t in data["teams"]:
+        s = sim["team_stats"][t]
+        history["qualify"][t].append(round((s["groupWinner"] + s["groupRunnerUp"]) * 100, 1))
+        history["win"][t].append(round(s["champion"] * 100, 1))
+    history["dates"].append("Baseline")
+
+    # Each date prefix (cumulative)
+    partial = {}
+    for date in dates:
+        partial[date] = played_results[date]
+        fixtures = build_fixtures(partial)
+        group_fix = assign_fixtures_to_groups(fixtures)
+
+        groups_output = {}
+        for g in sorted(GROUPS.keys()):
+            matches = group_fix.get(g, [])
+            groups_output[g] = {
+                "teams": GROUPS[g],
+                "matches": [
+                    {
+                        "home": m["home"], "away": m["away"], "date": m["date"],
+                        "venue": m["venue"], "neutral": m["neutral"],
+                        "home_score": m.get("home_score"),
+                        "away_score": m.get("away_score"),
+                    }
+                    for m in sorted(matches, key=lambda x: x["date"])
+                ],
+            }
+
+        h = hashlib.sha256()
+        h.update(json.dumps(partial, sort_keys=True).encode())
+        date_seed = int.from_bytes(h.digest()[:4], "big")
+
+        date_data = {
+            "teams": data["teams"],
+            "groups": groups_output,
+            "knockout_bracket": KNOCKOUT_BRACKET,
+            "model_params": data["model_params"],
+            "seed": date_seed,
+        }
+
+        sim = run_simulation(date_data, n)
+        for t in data["teams"]:
+            s = sim["team_stats"][t]
+            history["qualify"][t].append(round((s["groupWinner"] + s["groupRunnerUp"]) * 100, 1))
+            history["win"][t].append(round(s["champion"] * 100, 1))
+
+        history["dates"].append(date)
+
+    return history
+
+
 def main():
     print("Loading ELO ratings...")
     teams = load_elo_ratings()
@@ -495,6 +564,11 @@ def main():
     baseline_sim = run_simulation(baseline_data, 10000)
     data["baseline_team_stats"] = baseline_sim["team_stats"]
     print(f"  Done — baseline champion prob range: {min(s['champion'] for s in baseline_sim['team_stats'].values()):.1%} – {max(s['champion'] for s in baseline_sim['team_stats'].values()):.1%}")
+
+    print("Computing per-date probability history...")
+    prob_history = compute_prob_history(data, played_results, 10000)
+    data["prob_history"] = prob_history
+    print(f"  Done — {len(prob_history['dates'])} snapshots: {', '.join(prob_history['dates'])}")
 
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:

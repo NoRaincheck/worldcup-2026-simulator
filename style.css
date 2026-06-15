@@ -639,6 +639,49 @@ footer {
     margin-top: 2rem;
 }
 
+.chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+}
+.chart-container {
+    background: #181825;
+    border: 1px solid #313244;
+    border-radius: 6px;
+    padding: 1rem;
+    overflow-x: auto;
+}
+.chart-container svg { max-width: 100%; }
+.chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #313244;
+}
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    color: #a6adc8;
+    white-space: nowrap;
+}
+.legend-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+    .chart-grid { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 768px) {
     header h1 { font-size: 1.5rem; }
     .groups-grid { grid-template-columns: 1fr; }
