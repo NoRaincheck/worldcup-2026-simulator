@@ -70,6 +70,21 @@ header .subtitle { color: #a6adc8; font-size: 0.95rem; margin-top: 0.25rem; }
     font-size: 0.8rem; color: #1e1e2e; font-weight: 600;
 }
 
+#sim-message {
+    font-size: 0.85rem;
+    color: #a6adc8;
+    font-style: italic;
+    padding: 0.25rem 0.75rem;
+    background: #181825;
+    border: 1px solid #313244;
+    border-radius: 4px;
+    min-width: 280px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .toggle-group { gap: 0.6rem; }
 .toggle-label {
     display: flex;

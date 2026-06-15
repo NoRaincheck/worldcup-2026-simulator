@@ -29,6 +29,7 @@
             <div id="progress-bar" :style="'width:' + progress + '%'"></div>
             <span id="progress-text" x-text="progress + '%'"></span>
         </div>
+        <div id="sim-message" x-show="running && simMessage" x-text="simMessage"></div>
     </section>
 
     <template x-if="done">
@@ -337,6 +338,34 @@
             running: false,
             done: false,
             progress: 0,
+            simMessage: '',
+            simMessages: [
+                "VAR check in progress... goal stands!",
+                "Still more exciting than a 0-0 draw",
+                "Messi dribbling through the defense...",
+                "Ronaldo waiting for the perfect pass",
+                "Group of Death calculations in progress...",
+                "Crunching numbers like a 40-yard screamer",
+                "Extra time! Someone's cramping up",
+                "Calculating penalty shootout odds",
+                "48 teams, 104 matches, 1 trophy",
+                "Samba statistics in motion",
+                "Tactical foul! Yellow card issued.",
+                "Kick-off! And we're under way...",
+                "Goalkeeper ready for penalties",
+                "Destined for the final? Let's see...",
+                "Building the knockout bracket...",
+                "Hoping England get past the quarter-finals",
+                "Checking the offside trap...",
+                "Free kick specialist standing over the ball",
+                "Possession: 60% simulation, 40% anticipation",
+                "World Cup fever heating up the CPU",
+                "The beautiful game meets big data",
+                "Injury time! Adding stoppage simulations",
+                "Maradona would be proud of this algorithm",
+                "Panenka penalty loading...",
+                "Zidane headbutt probability: negligible",
+            ],
             stats: {},
             matchStatsMap: {},
             qualProbs: [],
@@ -884,6 +913,7 @@
                 this.running = true;
                 this.done = false;
                 this.progress = 0;
+                this.simMessage = '';
                 const n = this.simCount;
                 this.N = n;
 
@@ -909,8 +939,11 @@
 
                 await new Promise(resolve => {
                     let i = 0;
+                    const BATCH = 200;
+                    const PROGRESS_STEPS = 10;
+                    let lastReportedStep = -1;
                     const batch = () => {
-                        const end = Math.min(i + 200, n);
+                        const end = Math.min(i + BATCH, n);
                         for (; i < end; i++) {
                             const { groups: gr, matchStats: ms, simResults: sr, eloRatings } = this.simulateGroupStage();
                             for (const [g, st] of Object.entries(gr)) {
@@ -958,7 +991,12 @@
                             lastB = b;
                             lastSR = sr;
                         }
-                        this.progress = Math.floor((i / n) * 100);
+                        const step = Math.floor((i / n) * PROGRESS_STEPS);
+                        if (step > lastReportedStep) {
+                            lastReportedStep = step;
+                            this.progress = step * 10;
+                            this.simMessage = this.simMessages[Math.floor(Math.random() * this.simMessages.length)];
+                        }
                         if (i < n) setTimeout(batch, 0);
                         else {
                             this.stats = stats;
