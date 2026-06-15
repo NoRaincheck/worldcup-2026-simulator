@@ -1,0 +1,20 @@
+{
+  "2026-06-11": [
+    {"home": "Mexico", "away": "South Africa", "home_score": 2, "away_score": 0},
+    {"home": "South Korea", "away": "Czech Republic", "home_score": 2, "away_score": 1}
+  ],
+  "2026-06-12": [
+    {"home": "United States", "away": "Paraguay", "home_score": 4, "away_score": 1},
+    {"home": "Canada", "away": "Bosnia and Herzegovina", "home_score": 1, "away_score": 1}
+  ],
+  "2026-06-13": [
+    {"home": "Qatar", "away": "Switzerland", "home_score": 1, "away_score": 1},
+    {"home": "Brazil", "away": "Morocco", "home_score": 1, "away_score": 1},
+    {"home": "Haiti", "away": "Scotland", "home_score": 0, "away_score": 1},
+    {"home": "Australia", "away": "Turkey", "home_score": 2, "away_score": 0}
+  ],
+  "2026-06-14": [
+    {"home": "Germany", "away": "Curaçao", "home_score": 7, "away_score": 1},
+    {"home": "Netherlands", "away": "Japan", "home_score": 2, "away_score": 2}
+  ]
+}
