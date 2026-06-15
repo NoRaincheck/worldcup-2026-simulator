@@ -1,1145 +1,1870 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FIFA World Cup 2026 — Monte Carlo Simulator</title>
-    <link rel="stylesheet" href="style.css">
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
-    <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: false, theme: 'dark', themeVariables: { primaryColor: '#2563eb', primaryTextColor: '#e0e0e0', lineColor: '#4b5563', primaryBorderColor: '#1e2540' }, sankey: { showValues: false } });
-        window.mermaidReady = mermaid;
-    </script>
-</head>
-<body x-data="simulator()" x-init="init()">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>FIFA World Cup 2026 — Monte Carlo Simulator</title>
+        <link rel="stylesheet" href="style.css">
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+        <script type="module">
+            import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: "dark",
+                themeVariables: {
+                    primaryColor: "#2563eb",
+                    primaryTextColor: "#e0e0e0",
+                    lineColor: "#4b5563",
+                    primaryBorderColor: "#1e2540",
+                },
+                sankey: { showValues: false },
+            });
+            window.mermaidReady = mermaid;
+        </script>
+    </head>
+    <body x-data="simulator()" x-init="init()">
+        <header>
+            <h1>FIFA World Cup 2026</h1>
+            <p class="subtitle">Monte Carlo Tournament Simulator</p>
+        </header>
 
-    <header>
-        <h1>FIFA World Cup 2026</h1>
-        <p class="subtitle">Monte Carlo Tournament Simulator</p>
-    </header>
-
-    <section class="controls">
-        <div class="control-group">
-            <label for="sim-count">Simulations:</label>
-            <input type="number" id="sim-count" x-model.number="simCount" min="100" max="1000000" step="1000">
-        </div>
-        <button id="run-btn" @click="run()" :disabled="running" x-text="running ? 'Running...' : 'Re-Simulate'">Re-Simulate</button>
-        <div id="progress-container" x-show="running" x-transition>
-            <div id="progress-bar" :style="'width:' + progress + '%'"></div>
-            <span id="progress-text" x-text="progress + '%'"></span>
-        </div>
-        <div id="sim-message" x-show="running && simMessage" x-text="simMessage"></div>
-    </section>
-
-    <template x-if="done">
-    <section id="results">
-
-        <h2>Group Stage</h2>
-        <div id="groups" class="groups-grid">
-            <template x-for="g in groupLetters" :key="g">
-            <div class="group-card" @click="openGroup(g)" style="cursor:pointer">
-                <div class="group-header" x-text="'Group ' + g"></div>
-                <table class="group-table">
-                    <thead><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr></thead>
-                    <tbody>
-                    <template x-for="(row, ri) in expectedGroup(g)" :key="row.team">
-                    <tr :class="ri < 2 ? 'qualified' : ''">
-                        <td><span class="pos-badge" :class="'pos-' + (ri+1)" x-text="ri+1"></span></td>
-                        <td class="team-cell" x-text="row.team"></td>
-                        <td x-text="row.p"></td>
-                        <td x-text="row.w"></td>
-                        <td x-text="row.d"></td>
-                        <td x-text="row.l"></td>
-                        <td x-text="row.gf"></td>
-                        <td x-text="row.ga"></td>
-                        <td x-text="(row.gd > 0 ? '+' : '') + row.gd"></td>
-                        <td class="pts-cell" x-text="row.pts"></td>
-                    </tr>
-                    </template>
-                    </tbody>
-                </table>
+        <section class="controls">
+            <div class="control-group">
+                <label for="sim-count">Simulations:</label>
+                <input
+                    type="number"
+                    id="sim-count"
+                    x-model.number="simCount"
+                    min="100"
+                    max="1000000"
+                    step="1000"
+                >
             </div>
-            </template>
-        </div>
-
-        <div>
-            <h2>Third-Place Qualifiers</h2>
-            <div class="third-place-grid">
-                <template x-for="(t, i) in expectedThirds" :key="t.team">
-                <div class="third-card qualified">
-                    <span class="tp-rank" x-text="'#' + (i+1)"></span>
-                    <span class="tp-team" x-text="t.team"></span>
-                    <span class="tp-info" x-text="t.pts + ' pts, GD ' + (t.gd > 0 ? '+' : '') + t.gd"></span>
-                </div>
-                </template>
+            <button
+                id="run-btn"
+                @click="run()"
+                :disabled="running"
+                x-text="running ? 'Running...' : 'Re-Simulate'"
+            >
+                Re-Simulate
+            </button>
+            <div id="progress-container" x-show="running" x-transition>
+                <div id="progress-bar" :style="'width:' + progress + '%'"></div>
+                <span id="progress-text" x-text="progress + '%'"></span>
             </div>
-        </div>
+            <div id="sim-message" x-show="running && simMessage" x-text="simMessage"></div>
+        </section>
 
-        <div>
-            <h2>Expected Knockout Bracket</h2>
-            <div id="bracket" class="bracket-wrap">
-                <template x-for="rn in ['round_of_32','round_of_16','quarter_finals','semi_finals','final']" :key="rn">
-                <div class="bracket-round">
-                    <h3 x-text="roundLabel(rn)"></h3>
-                    <div class="bracket-matches" :class="'matches-' + expectedKnockout(rn).length">
-                        <template x-for="(m, i) in expectedKnockout(rn)" :key="i">
-                        <div class="bracket-match" :class="rn === 'final' ? 'final-match' : ''" @click="openKnockout(rn, i)" style="cursor:pointer">
-                            <div class="slot" :class="m.winner === m.home ? 'winner' : ''">
-                                <span class="team-name" x-text="m.home"></span><span class="score" x-text="m.hg"></span>
-                            </div>
-                            <div class="slot" :class="m.winner === m.away ? 'winner' : ''">
-                                <span class="team-name" x-text="m.away"></span><span class="score" x-text="m.ag"></span>
-                            </div>
+        <template x-if="done">
+            <section id="results">
+                <h2>Group Stage</h2>
+                <div id="groups" class="groups-grid">
+                    <template x-for="g in groupLetters" :key="g">
+                        <div class="group-card" @click="openGroup(g)" style="cursor: pointer">
+                            <div class="group-header" x-text="'Group ' + g"></div>
+                            <table class="group-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Team</th>
+                                        <th>P</th>
+                                        <th>W</th>
+                                        <th>D</th>
+                                        <th>L</th>
+                                        <th>GF</th>
+                                        <th>GA</th>
+                                        <th>GD</th>
+                                        <th>Pts</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="(row, ri) in expectedGroup(g)" :key="row.team">
+                                        <tr :class="ri < 2 ? 'qualified' : ''">
+                                            <td>
+                                                <span
+                                                    class="pos-badge"
+                                                    :class="'pos-' + (ri+1)"
+                                                    x-text="ri+1"
+                                                ></span>
+                                            </td>
+                                            <td class="team-cell" x-text="row.team"></td>
+                                            <td x-text="row.p"></td>
+                                            <td x-text="row.w"></td>
+                                            <td x-text="row.d"></td>
+                                            <td x-text="row.l"></td>
+                                            <td x-text="row.gf"></td>
+                                            <td x-text="row.ga"></td>
+                                            <td x-text="(row.gd > 0 ? '+' : '') + row.gd"></td>
+                                            <td class="pts-cell" x-text="row.pts"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
                         </div>
+                    </template>
+                </div>
+
+                <div>
+                    <h2>Third-Place Qualifiers</h2>
+                    <div class="third-place-grid">
+                        <template x-for="(t, i) in expectedThirds" :key="t.team">
+                            <div class="third-card qualified">
+                                <span class="tp-rank" x-text="'#' + (i+1)"></span>
+                                <span class="tp-team" x-text="t.team"></span>
+                                <span
+                                    class="tp-info"
+                                    x-text="t.pts + ' pts, GD ' + (t.gd > 0 ? '+' : '') + t.gd"
+                                ></span>
+                            </div>
                         </template>
                     </div>
                 </div>
-                </template>
-            </div>
-        </div>
 
-        <h2>Qualification Probabilities</h2>
-        <div class="group-filter">
-            <button class="filter-btn" :class="!qualFilter && 'active'" @click="qualFilter = null">All Groups</button>
-            <template x-for="g in groupLetters" :key="g">
-            <button class="filter-btn" :class="qualFilter === g && 'active'" @click="qualFilter = g" x-text="g"></button>
-            </template>
-        </div>
-        <div id="prob-table">
-            <table class="lb-table">
-                <thead><tr>
-                    <th @click="sortQual('rank')" class="sortable" :class="'sort-'+sortDir('rank')">#</th>
-                    <th @click="sortQual('team')" class="sortable" :class="'sort-'+sortDir('team')">Team</th>
-                    <th @click="sortQual('group')" class="sortable" :class="'sort-'+sortDir('group')">Group</th>
-                    <th @click="sortQual('elo')" class="sortable" :class="'sort-'+sortDir('elo')">ELO</th>
-                    <th @click="sortQual('groupWinner')" class="sortable" :class="'sort-'+sortDir('groupWinner')">1st</th>
-                    <th @click="sortQual('groupRunnerUp')" class="sortable" :class="'sort-'+sortDir('groupRunnerUp')">2nd</th>
-                    <th @click="sortQual('groupThird')" class="sortable" :class="'sort-'+sortDir('groupThird')">3rd</th>
-                    <th @click="sortQual('groupFourth')" class="sortable" :class="'sort-'+sortDir('groupFourth')">4th</th>
-                    <th @click="sortQual('qualify')" class="sortable" :class="'sort-'+sortDir('qualify')">Qualify</th>
-                    <th @click="sortQual('winner')" class="sortable" :class="'sort-'+sortDir('winner')">Winner</th>
-                </tr></thead>
-                <tbody>
-                <template x-for="(row, i) in sortedQualProbs" :key="row.team">
-                <tr>
-                    <td x-text="i+1"></td>
-                    <td x-text="row.team"></td>
-                    <td x-text="row.group"></td>
-                    <td><span class="elo-badge" x-text="row.elo"></span></td>
-                    <td x-text="(row.groupWinner/N*100).toFixed(0) + '%'"></td>
-                    <td x-text="(row.groupRunnerUp/N*100).toFixed(0) + '%'"></td>
-                    <td x-text="(row.groupThird/N*100).toFixed(0) + '%'"></td>
-                    <td x-text="(row.groupFourth/N*100).toFixed(0) + '%'"></td>
-                    <td><span class="pct-val" x-text="((row.groupWinner+row.groupRunnerUp)/N*100).toFixed(0) + '%'"></span><span :class="'prob-delta ' + deltaClass(qualDelta(row.team))" x-show="deltaStr(qualDelta(row.team))" x-text="deltaStr(qualDelta(row.team))"></span></td>
-                    <td><span class="pct-val" x-text="(row.champion/N*100).toFixed(1) + '%'"></span><span :class="'prob-delta ' + deltaClass(delta(row.team, 'champion'))" x-show="deltaStr(delta(row.team, 'champion'))" x-text="deltaStr(delta(row.team, 'champion'))"></span></td>
-                </tr>
-                </template>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="chart-grid">
-            <div class="chart-container">
-                <h2>Qualify Probability Over Time</h2>
-                <div class="mermaid-chart" x-ref="qualifyChart" x-effect="chartKey;renderProbChart('qualify')"></div>
-            </div>
-            <div class="chart-container">
-                <h2>Champion Probability Over Time</h2>
-                <div class="mermaid-chart" x-ref="winChart" x-effect="chartKey;renderProbChart('win')"></div>
-            </div>
-        </div>
-    </section>
-    </template>
-
-    <!-- Group Detail Modal -->
-    <div class="modal-overlay" x-show="modalGroup" x-transition.opacity @click.self="closeModal()">
-    <div class="modal" x-show="modalGroup" x-transition>
-        <div class="modal-header">
-            <h2 x-text="'Group ' + (modalGroup || '')"></h2>
-            <button class="modal-close" @click="closeModal()">&times;</button>
-        </div>
-        <template x-if="modalGroup">
-        <div class="modal-body">
-            <div class="modal-section">
-                <h3>Simulated Results</h3>
-                <table class="modal-table">
-                    <thead><tr><th>Match <span class="homeaway-legend"><span class="legend-sq legend-home"></span>H <span class="legend-sq legend-away"></span>A</span></th><th>Score</th><th>Status</th></tr></thead>
-                    <tbody>
-                    <template x-for="m in simResultsForGroup(modalGroup)" :key="m.home + m.away">
-                    <tr>
-                        <td class="match-cell">
-                            <span class="team-color-sq color-home"></span>
-                            <span x-text="m.home"></span>
-                            <span class="match-vs">vs</span>
-                            <span class="team-color-sq color-away"></span>
-                            <span x-text="m.away"></span>
-                        </td>
-                        <td class="score-cell">
-                            <span class="result-badge" x-text="m.hg + ' - ' + m.ag"></span>
-                        </td>
-                        <td>
-                            <span x-show="m.played" class="status-played">Played</span>
-                            <span x-show="!m.played" class="status-simulated">Simulated</span>
-                        </td>
-                    </tr>
-                    </template>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="modal-section">
-                <h3>Edit Match Outcomes</h3>
-                <table class="modal-table">
-                    <thead><tr><th>Match <span class="homeaway-legend"><span class="legend-sq legend-home"></span>H <span class="legend-sq legend-away"></span>A</span></th><th>Result</th></tr></thead>
-                    <tbody>
-                    <template x-for="m in groupMatches(modalGroup)" :key="m.home + m.away">
-                    <tr>
-                        <td class="match-cell">
-                            <span class="team-color-sq color-home"></span>
-                            <span x-text="m.home"></span>
-                            <span class="match-vs">vs</span>
-                            <span class="team-color-sq color-away"></span>
-                            <span x-text="m.away"></span>
-                        </td>
-                        <td class="prob-cell">
-                            <span class="prob-bar prob-win" :style="'width:' + (matchStats(m,'w')/N*100) + 'px'"></span>
-                            <span class="prob-val" x-text="(matchStats(m,'w')/N*100).toFixed(0) + '%'"></span>
-                        </td>
-                        <td class="prob-cell">
-                            <span class="prob-bar prob-draw" :style="'width:' + (matchStats(m,'d')/N*100) + 'px'"></span>
-                            <span class="prob-val" x-text="(matchStats(m,'d')/N*100).toFixed(0) + '%'"></span>
-                        </td>
-                        <td class="prob-cell">
-                            <span class="prob-bar prob-loss" :style="'width:' + (matchStats(m,'l')/N*100) + 'px'"></span>
-                            <span class="prob-val" x-text="(matchStats(m,'l')/N*100).toFixed(0) + '%'"></span>
-                        </td>
-                        <td class="edit-cell">
-                            <template x-if="m.home_score !== null && m.home_score !== undefined">
-                            <span class="result-badge" x-text="m.home_score + ' - ' + m.away_score"></span>
-                            </template>
-                            <template x-if="m.home_score === null || m.home_score === undefined">
-                            <div class="score-inputs">
-                                <input type="number" min="0" max="20"
-                                    :value="getScore(m, 'home')"
-                                    @change="setScore(m, 'home', $event.target.value)"
-                                    class="score-input">
-                                <span>-</span>
-                                <input type="number" min="0" max="20"
-                                    :value="getScore(m, 'away')"
-                                    @change="setScore(m, 'away', $event.target.value)"
-                                    class="score-input">
+                <div>
+                    <h2>Expected Knockout Bracket</h2>
+                    <div id="bracket" class="bracket-wrap">
+                        <template
+                            x-for="rn in ['round_of_32','round_of_16','quarter_finals','semi_finals','final']"
+                            :key="rn"
+                        >
+                            <div class="bracket-round">
+                                <h3 x-text="roundLabel(rn)"></h3>
+                                <div
+                                    class="bracket-matches"
+                                    :class="'matches-' + expectedKnockout(rn).length"
+                                >
+                                    <template x-for="(m, i) in expectedKnockout(rn)" :key="i">
+                                        <div
+                                            class="bracket-match"
+                                            :class="rn === 'final' ? 'final-match' : ''"
+                                            @click="openKnockout(rn, i)"
+                                            style="cursor: pointer"
+                                        >
+                                            <div
+                                                class="slot"
+                                                :class="m.winner === m.home ? 'winner' : ''"
+                                            >
+                                                <span class="team-name" x-text="m.home"></span><span
+                                                    class="score"
+                                                    x-text="m.hg"
+                                                ></span>
+                                            </div>
+                                            <div
+                                                class="slot"
+                                                :class="m.winner === m.away ? 'winner' : ''"
+                                            >
+                                                <span class="team-name" x-text="m.away"></span><span
+                                                    class="score"
+                                                    x-text="m.ag"
+                                                ></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
                             </div>
-                            </template>
-                        </td>
-                    </tr>
-                    </template>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="modal-section">
-                <h3>Expected Standings</h3>
-                <table class="modal-table">
-                    <thead><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr></thead>
-                    <tbody>
-                    <template x-for="(row, ri) in expectedGroupFull(modalGroup)" :key="row.team">
-                    <tr>
-                        <td><span class="pos-badge" :class="'pos-' + (ri+1)" x-text="ri+1"></span></td>
-                        <td class="team-cell" x-text="row.team"></td>
-                        <td><span x-text="row.cur.p"></span><span class="delta" x-show="row.exp.p > 0" x-text="' (+' + row.exp.p.toFixed(1) + ')'"></span></td>
-                        <td><span x-text="row.cur.w"></span><span class="delta" x-show="row.exp.w > 0" x-text="' (+' + row.exp.w.toFixed(1) + ')'"></span></td>
-                        <td><span x-text="row.cur.d"></span><span class="delta" x-show="row.exp.d > 0" x-text="' (+' + row.exp.d.toFixed(1) + ')'"></span></td>
-                        <td><span x-text="row.cur.l"></span><span class="delta" x-show="row.exp.l > 0" x-text="' (+' + row.exp.l.toFixed(1) + ')'"></span></td>
-                        <td><span x-text="row.cur.gf"></span><span class="delta" x-show="row.exp.gf > 0" x-text="' (+' + row.exp.gf.toFixed(1) + ')'"></span></td>
-                        <td><span x-text="row.cur.ga"></span><span class="delta" x-show="row.exp.ga > 0" x-text="' (+' + row.exp.ga.toFixed(1) + ')'"></span></td>
-                        <td><span x-text="(row.cur.gd > 0 ? '+' : '') + row.cur.gd"></span><span class="delta" x-show="row.exp.gd !== 0" x-text="' (' + (row.exp.gd > 0 ? '+' : '') + row.exp.gd.toFixed(1) + ')'"></span></td>
-                        <td class="pts-cell"><span x-text="row.cur.pts"></span><span class="delta" x-show="row.exp.pts > 0" x-text="' (+' + row.exp.pts.toFixed(1) + ')'"></span></td>
-                    </tr>
-                    </template>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="modal-section">
-                <h3>Group Outcome Flow</h3>
-                <div class="sankey-container" x-ref="sankeyBox" x-effect="renderSankey(modalGroup)"></div>
-            </div>
-        </div>
-        </template>
-    </div>
-    </div>
-
-    <!-- Knockout Match Modal -->
-    <div class="modal-overlay" x-show="modalKnockout" x-transition.opacity @click.self="closeKnockoutModal()">
-    <div class="modal" x-show="modalKnockout" x-transition>
-        <div class="modal-header">
-            <h2 x-text="modalKnockout ? roundLabel(modalKnockout.round) + ' \u2014 Match ' + (modalKnockout.index + 1) : ''"></h2>
-            <button class="modal-close" @click="closeKnockoutModal()">&times;</button>
-        </div>
-        <template x-if="modalKnockout">
-        <div class="modal-body">
-            <div class="modal-section">
-                <h3>Match Probabilities</h3>
-                <template x-if="expectedKnockout(modalKnockout.round)[modalKnockout.index]">
-                <div class="knockout-matchup">
-                    <div class="matchup-teams">
-                        <span class="team-home" x-text="expectedKnockout(modalKnockout.round)[modalKnockout.index].home"></span>
-                        <span class="matchup-vs">vs</span>
-                        <span class="team-away" x-text="expectedKnockout(modalKnockout.round)[modalKnockout.index].away"></span>
-                    </div>
-                    <div class="prob-bars">
-                        <div class="prob-row">
-                            <span class="prob-label" x-text="expectedKnockout(modalKnockout.round)[modalKnockout.index].home"></span>
-                            <span class="prob-bar prob-win" :style="'width:' + (koStats(modalKnockout.round, modalKnockout.index).w / (koStats(modalKnockout.round, modalKnockout.index).w + koStats(modalKnockout.round, modalKnockout.index).d + koStats(modalKnockout.round, modalKnockout.index).l || 1) * 100) + 'px'"></span>
-                            <span class="prob-val" x-text="(koStats(modalKnockout.round, modalKnockout.index).w / (koStats(modalKnockout.round, modalKnockout.index).w + koStats(modalKnockout.round, modalKnockout.index).d + koStats(modalKnockout.round, modalKnockout.index).l || 1) * 100).toFixed(1) + '%'"></span>
-                        </div>
-                        <div class="prob-row">
-                            <span class="prob-label">Draw</span>
-                            <span class="prob-bar prob-draw" :style="'width:' + (koStats(modalKnockout.round, modalKnockout.index).d / (koStats(modalKnockout.round, modalKnockout.index).w + koStats(modalKnockout.round, modalKnockout.index).d + koStats(modalKnockout.round, modalKnockout.index).l || 1) * 100) + 'px'"></span>
-                            <span class="prob-val" x-text="(koStats(modalKnockout.round, modalKnockout.index).d / (koStats(modalKnockout.round, modalKnockout.index).w + koStats(modalKnockout.round, modalKnockout.index).d + koStats(modalKnockout.round, modalKnockout.index).l || 1) * 100).toFixed(1) + '%'"></span>
-                        </div>
-                        <div class="prob-row">
-                            <span class="prob-label" x-text="expectedKnockout(modalKnockout.round)[modalKnockout.index].away"></span>
-                            <span class="prob-bar prob-loss" :style="'width:' + (koStats(modalKnockout.round, modalKnockout.index).l / (koStats(modalKnockout.round, modalKnockout.index).w + koStats(modalKnockout.round, modalKnockout.index).d + koStats(modalKnockout.round, modalKnockout.index).l || 1) * 100) + 'px'"></span>
-                            <span class="prob-val" x-text="(koStats(modalKnockout.round, modalKnockout.index).l / (koStats(modalKnockout.round, modalKnockout.index).w + koStats(modalKnockout.round, modalKnockout.index).d + koStats(modalKnockout.round, modalKnockout.index).l || 1) * 100).toFixed(1) + '%'"></span>
-                        </div>
-                    </div>
-                    <div class="avg-goals">
-                        <span x-text="'Avg: ' + (koStats(modalKnockout.round, modalKnockout.index).hg / (koStats(modalKnockout.round, modalKnockout.index).w + koStats(modalKnockout.round, modalKnockout.index).d + koStats(modalKnockout.round, modalKnockout.index).l || 1)).toFixed(2) + ' - ' + (koStats(modalKnockout.round, modalKnockout.index).ag / (koStats(modalKnockout.round, modalKnockout.index).w + koStats(modalKnockout.round, modalKnockout.index).d + koStats(modalKnockout.round, modalKnockout.index).l || 1)).toFixed(2)"></span>
+                        </template>
                     </div>
                 </div>
+
+                <h2>Qualification Probabilities</h2>
+                <div class="group-filter">
+                    <button
+                        class="filter-btn"
+                        :class="!qualFilter && 'active'"
+                        @click="qualFilter = null"
+                    >
+                        All Groups
+                    </button>
+                    <template x-for="g in groupLetters" :key="g">
+                        <button
+                            class="filter-btn"
+                            :class="qualFilter === g && 'active'"
+                            @click="qualFilter = g"
+                            x-text="g"
+                        >
+                        </button>
+                    </template>
+                </div>
+                <div id="prob-table">
+                    <table class="lb-table">
+                        <thead>
+                            <tr>
+                                <th
+                                    @click="sortQual('rank')"
+                                    class="sortable"
+                                    :class="'sort-'+sortDir('rank')"
+                                >
+                                    #
+                                </th>
+                                <th
+                                    @click="sortQual('team')"
+                                    class="sortable"
+                                    :class="'sort-'+sortDir('team')"
+                                >
+                                    Team
+                                </th>
+                                <th
+                                    @click="sortQual('group')"
+                                    class="sortable"
+                                    :class="'sort-'+sortDir('group')"
+                                >
+                                    Group
+                                </th>
+                                <th
+                                    @click="sortQual('elo')"
+                                    class="sortable"
+                                    :class="'sort-'+sortDir('elo')"
+                                >
+                                    ELO
+                                </th>
+                                <th
+                                    @click="sortQual('groupWinner')"
+                                    class="sortable"
+                                    :class="'sort-'+sortDir('groupWinner')"
+                                >
+                                    1st
+                                </th>
+                                <th
+                                    @click="sortQual('groupRunnerUp')"
+                                    class="sortable"
+                                    :class="'sort-'+sortDir('groupRunnerUp')"
+                                >
+                                    2nd
+                                </th>
+                                <th
+                                    @click="sortQual('groupThird')"
+                                    class="sortable"
+                                    :class="'sort-'+sortDir('groupThird')"
+                                >
+                                    3rd
+                                </th>
+                                <th
+                                    @click="sortQual('groupFourth')"
+                                    class="sortable"
+                                    :class="'sort-'+sortDir('groupFourth')"
+                                >
+                                    4th
+                                </th>
+                                <th
+                                    @click="sortQual('qualify')"
+                                    class="sortable"
+                                    :class="'sort-'+sortDir('qualify')"
+                                >
+                                    Qualify
+                                </th>
+                                <th
+                                    @click="sortQual('winner')"
+                                    class="sortable"
+                                    :class="'sort-'+sortDir('winner')"
+                                >
+                                    Winner
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(row, i) in sortedQualProbs" :key="row.team">
+                                <tr>
+                                    <td x-text="i+1"></td>
+                                    <td x-text="row.team"></td>
+                                    <td x-text="row.group"></td>
+                                    <td><span class="elo-badge" x-text="row.elo"></span></td>
+                                    <td x-text="(row.groupWinner/N*100).toFixed(0) + '%'"></td>
+                                    <td x-text="(row.groupRunnerUp/N*100).toFixed(0) + '%'"></td>
+                                    <td x-text="(row.groupThird/N*100).toFixed(0) + '%'"></td>
+                                    <td x-text="(row.groupFourth/N*100).toFixed(0) + '%'"></td>
+                                    <td>
+                                        <span
+                                            class="pct-val"
+                                            x-text="((row.groupWinner+row.groupRunnerUp)/N*100).toFixed(0) + '%'"
+                                        ></span><span
+                                            :class="'prob-delta ' + deltaClass(qualDelta(row.team))"
+                                            x-show="deltaStr(qualDelta(row.team))"
+                                            x-text="deltaStr(qualDelta(row.team))"
+                                        ></span>
+                                    </td>
+                                    <td>
+                                        <span
+                                            class="pct-val"
+                                            x-text="(row.champion/N*100).toFixed(1) + '%'"
+                                        ></span><span
+                                            :class="'prob-delta ' + deltaClass(delta(row.team, 'champion'))"
+                                            x-show="deltaStr(delta(row.team, 'champion'))"
+                                            x-text="deltaStr(delta(row.team, 'champion'))"
+                                        ></span>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="chart-grid">
+                    <div class="chart-container">
+                        <h2>Qualify Probability Over Time</h2>
+                        <div
+                            class="mermaid-chart"
+                            x-ref="qualifyChart"
+                            x-effect="chartKey;renderProbChart('qualify')"
+                        >
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <h2>Champion Probability Over Time</h2>
+                        <div
+                            class="mermaid-chart"
+                            x-ref="winChart"
+                            x-effect="chartKey;renderProbChart('win')"
+                        >
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </template>
+
+        <!-- Group Detail Modal -->
+        <div
+            class="modal-overlay"
+            x-show="modalGroup"
+            x-transition.opacity
+            @click.self="closeModal()"
+        >
+            <div class="modal" x-show="modalGroup" x-transition>
+                <div class="modal-header">
+                    <h2 x-text="'Group ' + (modalGroup || '')"></h2>
+                    <button class="modal-close" @click="closeModal()">&times;</button>
+                </div>
+                <template x-if="modalGroup">
+                    <div class="modal-body">
+                        <div class="modal-section">
+                            <h3>Simulated Results</h3>
+                            <table class="modal-table">
+                                <thead>
+                                    <tr>
+                                        <th>
+                                            Match <span class="homeaway-legend"><span
+                                                    class="legend-sq legend-home"
+                                                ></span>H <span
+                                                    class="legend-sq legend-away"
+                                                ></span>A</span>
+                                        </th>
+                                        <th>Score</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template
+                                        x-for="m in simResultsForGroup(modalGroup)"
+                                        :key="m.home + m.away"
+                                    >
+                                        <tr>
+                                            <td class="match-cell">
+                                                <span class="team-color-sq color-home"></span>
+                                                <span x-text="m.home"></span>
+                                                <span class="match-vs">vs</span>
+                                                <span class="team-color-sq color-away"></span>
+                                                <span x-text="m.away"></span>
+                                            </td>
+                                            <td class="score-cell">
+                                                <span
+                                                    class="result-badge"
+                                                    x-text="m.hg + ' - ' + m.ag"
+                                                ></span>
+                                            </td>
+                                            <td>
+                                                <span x-show="m.played" class="status-played"
+                                                >Played</span>
+                                                <span x-show="!m.played" class="status-simulated"
+                                                >Simulated</span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>Edit Match Outcomes</h3>
+                            <table class="modal-table">
+                                <thead>
+                                    <tr>
+                                        <th>
+                                            Match <span class="homeaway-legend"><span
+                                                    class="legend-sq legend-home"
+                                                ></span>H <span
+                                                    class="legend-sq legend-away"
+                                                ></span>A</span>
+                                        </th>
+                                        <th>Result</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template
+                                        x-for="m in groupMatches(modalGroup)"
+                                        :key="m.home + m.away"
+                                    >
+                                        <tr>
+                                            <td class="match-cell">
+                                                <span class="team-color-sq color-home"></span>
+                                                <span x-text="m.home"></span>
+                                                <span class="match-vs">vs</span>
+                                                <span class="team-color-sq color-away"></span>
+                                                <span x-text="m.away"></span>
+                                            </td>
+                                            <td class="prob-cell">
+                                                <span
+                                                    class="prob-bar prob-win"
+                                                    :style="'width:' + (matchStats(m,'w')/N*100) + 'px'"
+                                                ></span>
+                                                <span
+                                                    class="prob-val"
+                                                    x-text="(matchStats(m,'w')/N*100).toFixed(0) + '%'"
+                                                ></span>
+                                            </td>
+                                            <td class="prob-cell">
+                                                <span
+                                                    class="prob-bar prob-draw"
+                                                    :style="'width:' + (matchStats(m,'d')/N*100) + 'px'"
+                                                ></span>
+                                                <span
+                                                    class="prob-val"
+                                                    x-text="(matchStats(m,'d')/N*100).toFixed(0) + '%'"
+                                                ></span>
+                                            </td>
+                                            <td class="prob-cell">
+                                                <span
+                                                    class="prob-bar prob-loss"
+                                                    :style="'width:' + (matchStats(m,'l')/N*100) + 'px'"
+                                                ></span>
+                                                <span
+                                                    class="prob-val"
+                                                    x-text="(matchStats(m,'l')/N*100).toFixed(0) + '%'"
+                                                ></span>
+                                            </td>
+                                            <td class="edit-cell">
+                                                <template
+                                                    x-if="m.home_score !== null && m.home_score !== undefined"
+                                                >
+                                                    <span
+                                                        class="result-badge"
+                                                        x-text="m.home_score + ' - ' + m.away_score"
+                                                    ></span>
+                                                </template>
+                                                <template
+                                                    x-if="m.home_score === null || m.home_score === undefined"
+                                                >
+                                                    <div class="score-inputs">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="20"
+                                                            :value="getScore(m, 'home')"
+                                                            @change="setScore(m, 'home', $event.target.value)"
+                                                            class="score-input"
+                                                        >
+                                                        <span>-</span>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="20"
+                                                            :value="getScore(m, 'away')"
+                                                            @change="setScore(m, 'away', $event.target.value)"
+                                                            class="score-input"
+                                                        >
+                                                    </div>
+                                                </template>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>Expected Standings</h3>
+                            <table class="modal-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Team</th>
+                                        <th>P</th>
+                                        <th>W</th>
+                                        <th>D</th>
+                                        <th>L</th>
+                                        <th>GF</th>
+                                        <th>GA</th>
+                                        <th>GD</th>
+                                        <th>Pts</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template
+                                        x-for="(row, ri) in expectedGroupFull(modalGroup)"
+                                        :key="row.team"
+                                    >
+                                        <tr>
+                                            <td>
+                                                <span
+                                                    class="pos-badge"
+                                                    :class="'pos-' + (ri+1)"
+                                                    x-text="ri+1"
+                                                ></span>
+                                            </td>
+                                            <td class="team-cell" x-text="row.team"></td>
+                                            <td>
+                                                <span x-text="row.cur.p"></span><span
+                                                    class="delta"
+                                                    x-show="row.exp.p > 0"
+                                                    x-text="' (+' + row.exp.p.toFixed(1) + ')'"
+                                                ></span>
+                                            </td>
+                                            <td>
+                                                <span x-text="row.cur.w"></span><span
+                                                    class="delta"
+                                                    x-show="row.exp.w > 0"
+                                                    x-text="' (+' + row.exp.w.toFixed(1) + ')'"
+                                                ></span>
+                                            </td>
+                                            <td>
+                                                <span x-text="row.cur.d"></span><span
+                                                    class="delta"
+                                                    x-show="row.exp.d > 0"
+                                                    x-text="' (+' + row.exp.d.toFixed(1) + ')'"
+                                                ></span>
+                                            </td>
+                                            <td>
+                                                <span x-text="row.cur.l"></span><span
+                                                    class="delta"
+                                                    x-show="row.exp.l > 0"
+                                                    x-text="' (+' + row.exp.l.toFixed(1) + ')'"
+                                                ></span>
+                                            </td>
+                                            <td>
+                                                <span x-text="row.cur.gf"></span><span
+                                                    class="delta"
+                                                    x-show="row.exp.gf > 0"
+                                                    x-text="' (+' + row.exp.gf.toFixed(1) + ')'"
+                                                ></span>
+                                            </td>
+                                            <td>
+                                                <span x-text="row.cur.ga"></span><span
+                                                    class="delta"
+                                                    x-show="row.exp.ga > 0"
+                                                    x-text="' (+' + row.exp.ga.toFixed(1) + ')'"
+                                                ></span>
+                                            </td>
+                                            <td>
+                                                <span
+                                                    x-text="(row.cur.gd > 0 ? '+' : '') + row.cur.gd"
+                                                ></span><span
+                                                    class="delta"
+                                                    x-show="row.exp.gd !== 0"
+                                                    x-text="' (' + (row.exp.gd > 0 ? '+' : '') + row.exp.gd.toFixed(1) + ')'"
+                                                ></span>
+                                            </td>
+                                            <td class="pts-cell">
+                                                <span x-text="row.cur.pts"></span><span
+                                                    class="delta"
+                                                    x-show="row.exp.pts > 0"
+                                                    x-text="' (+' + row.exp.pts.toFixed(1) + ')'"
+                                                ></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>Group Outcome Flow</h3>
+                            <div
+                                class="sankey-container"
+                                x-ref="sankeyBox"
+                                x-effect="renderSankey(modalGroup)"
+                            >
+                            </div>
+                        </div>
+                    </div>
                 </template>
             </div>
-            <div class="modal-section" x-data="{ m: expectedKnockout(modalKnockout.round)[modalKnockout.index] }">
-                <h3>Edit Result</h3>
-                <div class="knockout-edit">
-                    <span class="edit-team-name" x-text="m?.home"></span>
-                    <div class="score-inputs">
-                        <input type="number" min="0" max="20"
-                            :value="getKoScore(modalKnockout.round, modalKnockout.index, 'home')"
-                            @change="setKoScore(modalKnockout.round, modalKnockout.index, 'home', $event.target.value)"
-                            class="score-input">
-                        <span>-</span>
-                        <input type="number" min="0" max="20"
-                            :value="getKoScore(modalKnockout.round, modalKnockout.index, 'away')"
-                            @change="setKoScore(modalKnockout.round, modalKnockout.index, 'away', $event.target.value)"
-                            class="score-input">
-                    </div>
-                    <span class="edit-team-name" x-text="m?.away"></span>
+        </div>
+
+        <!-- Knockout Match Modal -->
+        <div
+            class="modal-overlay"
+            x-show="modalKnockout"
+            x-transition.opacity
+            @click.self="closeKnockoutModal()"
+        >
+            <div class="modal" x-show="modalKnockout" x-transition>
+                <div class="modal-header">
+                    <h2
+                        x-text="modalKnockout ? roundLabel(modalKnockout.round) + ' \u2014 Match ' + (modalKnockout.index + 1) : ''"
+                    >
+                    </h2>
+                    <button class="modal-close" @click="closeKnockoutModal()">&times;</button>
                 </div>
-            </div>
-            <div class="modal-section">
-                <h3>Scoreline Distribution</h3>
-                <div class="mermaid-chart" x-ref="knockoutMermaid" x-effect="if (modalKnockout) renderKnockoutMermaid()"></div>
+                <template x-if="modalKnockout">
+                    <div class="modal-body">
+                        <div class="modal-section">
+                            <h3>Match Probabilities</h3>
+                            <template
+                                x-if="expectedKnockout(modalKnockout.round)[modalKnockout.index]"
+                            >
+                                <div class="knockout-matchup">
+                                    <div class="matchup-teams">
+                                        <span
+                                            class="team-home"
+                                            x-text="expectedKnockout(modalKnockout.round)[modalKnockout.index].home"
+                                        ></span>
+                                        <span class="matchup-vs">vs</span>
+                                        <span
+                                            class="team-away"
+                                            x-text="expectedKnockout(modalKnockout.round)[modalKnockout.index].away"
+                                        ></span>
+                                    </div>
+                                    <div class="prob-bars">
+                                        <div class="prob-row">
+                                            <span
+                                                class="prob-label"
+                                                x-text="expectedKnockout(modalKnockout.round)[modalKnockout.index].home"
+                                            ></span>
+                                            <span
+                                                class="prob-bar prob-win"
+                                                :style="'width:' + (koStats(modalKnockout.round, modalKnockout.index).w / (koStats(modalKnockout.round, modalKnockout.index).w + koStats(modalKnockout.round, modalKnockout.index).d + koStats(modalKnockout.round, modalKnockout.index).l || 1) * 100) + 'px'"
+                                            ></span>
+                                            <span
+                                                class="prob-val"
+                                                x-text="(koStats(modalKnockout.round, modalKnockout.index).w / (koStats(modalKnockout.round, modalKnockout.index).w + koStats(modalKnockout.round, modalKnockout.index).d + koStats(modalKnockout.round, modalKnockout.index).l || 1) * 100).toFixed(1) + '%'"
+                                            ></span>
+                                        </div>
+                                        <div class="prob-row">
+                                            <span class="prob-label">Draw</span>
+                                            <span
+                                                class="prob-bar prob-draw"
+                                                :style="'width:' + (koStats(modalKnockout.round, modalKnockout.index).d / (koStats(modalKnockout.round, modalKnockout.index).w + koStats(modalKnockout.round, modalKnockout.index).d + koStats(modalKnockout.round, modalKnockout.index).l || 1) * 100) + 'px'"
+                                            ></span>
+                                            <span
+                                                class="prob-val"
+                                                x-text="(koStats(modalKnockout.round, modalKnockout.index).d / (koStats(modalKnockout.round, modalKnockout.index).w + koStats(modalKnockout.round, modalKnockout.index).d + koStats(modalKnockout.round, modalKnockout.index).l || 1) * 100).toFixed(1) + '%'"
+                                            ></span>
+                                        </div>
+                                        <div class="prob-row">
+                                            <span
+                                                class="prob-label"
+                                                x-text="expectedKnockout(modalKnockout.round)[modalKnockout.index].away"
+                                            ></span>
+                                            <span
+                                                class="prob-bar prob-loss"
+                                                :style="'width:' + (koStats(modalKnockout.round, modalKnockout.index).l / (koStats(modalKnockout.round, modalKnockout.index).w + koStats(modalKnockout.round, modalKnockout.index).d + koStats(modalKnockout.round, modalKnockout.index).l || 1) * 100) + 'px'"
+                                            ></span>
+                                            <span
+                                                class="prob-val"
+                                                x-text="(koStats(modalKnockout.round, modalKnockout.index).l / (koStats(modalKnockout.round, modalKnockout.index).w + koStats(modalKnockout.round, modalKnockout.index).d + koStats(modalKnockout.round, modalKnockout.index).l || 1) * 100).toFixed(1) + '%'"
+                                            ></span>
+                                        </div>
+                                    </div>
+                                    <div class="avg-goals">
+                                        <span
+                                            x-text="'Avg: ' + (koStats(modalKnockout.round, modalKnockout.index).hg / (koStats(modalKnockout.round, modalKnockout.index).w + koStats(modalKnockout.round, modalKnockout.index).d + koStats(modalKnockout.round, modalKnockout.index).l || 1)).toFixed(2) + ' - ' + (koStats(modalKnockout.round, modalKnockout.index).ag / (koStats(modalKnockout.round, modalKnockout.index).w + koStats(modalKnockout.round, modalKnockout.index).d + koStats(modalKnockout.round, modalKnockout.index).l || 1)).toFixed(2)"
+                                        ></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <div
+                            class="modal-section"
+                            x-data="{ m: expectedKnockout(modalKnockout.round)[modalKnockout.index] }"
+                        >
+                            <h3>Edit Result</h3>
+                            <div class="knockout-edit">
+                                <span class="edit-team-name" x-text="m?.home"></span>
+                                <div class="score-inputs">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="20"
+                                        :value="getKoScore(modalKnockout.round, modalKnockout.index, 'home')"
+                                        @change="setKoScore(modalKnockout.round, modalKnockout.index, 'home', $event.target.value)"
+                                        class="score-input"
+                                    >
+                                    <span>-</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="20"
+                                        :value="getKoScore(modalKnockout.round, modalKnockout.index, 'away')"
+                                        @change="setKoScore(modalKnockout.round, modalKnockout.index, 'away', $event.target.value)"
+                                        class="score-input"
+                                    >
+                                </div>
+                                <span class="edit-team-name" x-text="m?.away"></span>
+                            </div>
+                        </div>
+                        <div class="modal-section">
+                            <h3>Scoreline Distribution</h3>
+                            <div
+                                class="mermaid-chart"
+                                x-ref="knockoutMermaid"
+                                x-effect="if (modalKnockout) renderKnockoutMermaid()"
+                            >
+                            </div>
+                        </div>
+                    </div>
+                </template>
             </div>
         </div>
-        </template>
-    </div>
-    </div>
 
-    <footer>
-        <p>Data: World Football Elo Ratings (eloratings.net) &amp; international-results (martj42)</p>
-        <p>Edit <code>data/results.json</code> to add match results, then re-run.</p>
-    </footer>
+        <footer>
+            <p>
+                Data: World Football Elo Ratings (eloratings.net) &amp; international-results
+                (martj42)
+            </p>
+            <p>Edit <code>data/results.json</code> to add match results, then re-run.</p>
+        </footer>
 
-    <script>
-    function simulator() {
-        return {
-            data: null,
-            teams: {},
-            simCount: 10000,
-            N: 0,
-            running: false,
-            done: false,
-            progress: 0,
-            simMessage: '',
-            simMessages: [
-                "VAR check in progress... goal stands!",
-                "Still more exciting than a 0-0 draw",
-                "Messi dribbling through the defense...",
-                "Ronaldo waiting for the perfect pass",
-                "Group of Death calculations in progress...",
-                "Crunching numbers like a 40-yard screamer",
-                "Extra time! Someone's cramping up",
-                "Calculating penalty shootout odds",
-                "48 teams, 104 matches, 1 trophy",
-                "Samba statistics in motion",
-                "Tactical foul! Yellow card issued.",
-                "Kick-off! And we're under way...",
-                "Goalkeeper ready for penalties",
-                "Destined for the final? Let's see...",
-                "Building the knockout bracket...",
-                "Hoping England get past the quarter-finals",
-                "Checking the offside trap...",
-                "Free kick specialist standing over the ball",
-                "Possession: 60% simulation, 40% anticipation",
-                "World Cup fever heating up the CPU",
-                "The beautiful game meets big data",
-                "Injury time! Adding stoppage simulations",
-                "Maradona would be proud of this algorithm",
-                "Panenka penalty loading...",
-                "Zidane headbutt probability: negligible",
-            ],
-            stats: {},
-            baselineStats: {},
-            matchStatsMap: {},
-            qualProbs: [],
-            qualFilter: null,
-            qualSort: 'champion',
-            qualSortDesc: true,
-            expectedThirds: [],
-            knockoutStats: {},
-            modalKnockout: null,
-            editedKoScores: {},
+        <script>
+            function simulator() {
+                return {
+                    data: null,
+                    teams: {},
+                    simCount: 10000,
+                    N: 0,
+                    running: false,
+                    done: false,
+                    progress: 0,
+                    simMessage: "",
+                    simMessages: [
+                        "VAR check in progress... goal stands!",
+                        "Still more exciting than a 0-0 draw",
+                        "Messi dribbling through the defense...",
+                        "Ronaldo waiting for the perfect pass",
+                        "Group of Death calculations in progress...",
+                        "Crunching numbers like a 40-yard screamer",
+                        "Extra time! Someone's cramping up",
+                        "Calculating penalty shootout odds",
+                        "48 teams, 104 matches, 1 trophy",
+                        "Samba statistics in motion",
+                        "Tactical foul! Yellow card issued.",
+                        "Kick-off! And we're under way...",
+                        "Goalkeeper ready for penalties",
+                        "Destined for the final? Let's see...",
+                        "Building the knockout bracket...",
+                        "Hoping England get past the quarter-finals",
+                        "Checking the offside trap...",
+                        "Free kick specialist standing over the ball",
+                        "Possession: 60% simulation, 40% anticipation",
+                        "World Cup fever heating up the CPU",
+                        "The beautiful game meets big data",
+                        "Injury time! Adding stoppage simulations",
+                        "Maradona would be proud of this algorithm",
+                        "Panenka penalty loading...",
+                        "Zidane headbutt probability: negligible",
+                    ],
+                    stats: {},
+                    baselineStats: {},
+                    matchStatsMap: {},
+                    qualProbs: [],
+                    qualFilter: null,
+                    qualSort: "champion",
+                    qualSortDesc: true,
+                    expectedThirds: [],
+                    knockoutStats: {},
+                    modalKnockout: null,
+                    editedKoScores: {},
 
-            
-            get filteredQualProbs() {
-                if (!this.qualFilter) return this.qualProbs;
-                return this.qualProbs.filter(r => r.group === this.qualFilter);
-            },
+                    get filteredQualProbs() {
+                        if (!this.qualFilter) return this.qualProbs;
+                        return this.qualProbs.filter((r) => r.group === this.qualFilter);
+                    },
 
-            get sortedQualProbs() {
-                const rows = [...this.filteredQualProbs];
-                const col = this.qualSort;
-                const dir = this.qualSortDesc ? -1 : 1;
-                return rows.sort((a, b) => {
-                    let va, vb;
-                    if (col === 'rank') { va = a.champion; vb = b.champion; }
-                    else if (col === 'qualify') { va = a.groupWinner + a.groupRunnerUp; vb = b.groupWinner + b.groupRunnerUp; }
-                    else if (col === 'winner') { va = a.champion; vb = b.champion; }
-                    else { va = a[col]; vb = b[col]; }
-                    if (typeof va === 'string') return va.localeCompare(vb) * dir;
-                    return (va - vb) * dir;
-                });
-            },
-
-            sortQual(col) {
-                if (this.qualSort === col) {
-                    this.qualSortDesc = !this.qualSortDesc;
-                } else {
-                    this.qualSort = col;
-                    this.qualSortDesc = true;
-                }
-            },
-
-            sortDir(col) {
-                if (this.qualSort !== col) return '';
-                return this.qualSortDesc ? 'desc' : 'asc';
-            },
-
-            delta(team, field) {
-                const base = this.baselineStats[team];
-                if (!base) return 0;
-                const cur = this.stats[team]?.[field] ?? 0;
-                const n = this.N || 1;
-                return (cur / n - base[field]) * 100;
-            },
-
-            qualDelta(team) {
-                const base = this.baselineStats[team];
-                if (!base) return 0;
-                const cur = this.stats[team] || {};
-                const curPct = ((cur.groupWinner ?? 0) + (cur.groupRunnerUp ?? 0)) / (this.N || 1);
-                const basePct = (base.groupWinner ?? 0) + (base.groupRunnerUp ?? 0);
-                return (curPct - basePct) * 100;
-            },
-
-            deltaStr(d) {
-                if (Math.abs(d) < 0.1) return '';
-                return (d > 0 ? '+' : '') + d.toFixed(1) + '%';
-            },
-
-            deltaClass(d) {
-                if (d > 0.5) return 'positive';
-                if (d < -0.5) return 'negative';
-                return 'neutral';
-            },
-
-            lastBrackets: null,
-            lastGroupResults: null,
-            lastSimResults: {},
-            groupLetters: ['A','B','C','D','E','F','G','H','I','J','K','L'],
-            modalGroup: null,
-            editedScores: {},
-
-            async init() {
-                try {
-                    const r = await fetch('data/simulation_data.json');
-                    this.data = await r.json();
-                    this.teams = this.data.teams;
-                    this.baselineStats = this.data.baseline_team_stats || {};
-                    this._rng = this.mulberry32(this.data.seed || 0);
-                    this.run();
-                } catch (e) {
-                    alert('Failed to load data — run uv run build_data.py first.');
-                }
-            },
-
-            mulberry32(a) {
-                return () => {
-                    a |= 0; a = a + 0x6D2B79F5 | 0;
-                    let t = Math.imul(a ^ a >>> 15, 1 | a);
-                    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-                    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-                };
-            },
-
-            poissonRandom(lambda) {
-                if (lambda <= 0) return 0;
-                const L = Math.exp(-lambda);
-                let k = 0, p = 1;
-                do { k++; p *= this._rng(); } while (p > L);
-                return k - 1;
-            },
-
-            MOMENTUM_FACTOR: 1.8,
-
-            eloAdjust(winnerElo, loserElo, drawn = false, k = 20) {
-                const expected = 1 / (1 + Math.pow(10, (loserElo - winnerElo) / 400));
-                if (drawn) return k * (0.5 - expected);
-                return k * (1 - expected);
-            },
-
-            applyMomentum(eloRatings, home, away, hg, ag) {
-                if (hg > ag) {
-                    const adj = this.eloAdjust(eloRatings[home], eloRatings[away]) * this.MOMENTUM_FACTOR;
-                    eloRatings[home] += adj;
-                    eloRatings[away] -= adj;
-                } else if (hg < ag) {
-                    const adj = this.eloAdjust(eloRatings[away], eloRatings[home]) * this.MOMENTUM_FACTOR;
-                    eloRatings[away] += adj;
-                    eloRatings[home] -= adj;
-                } else {
-                    const adj = this.eloAdjust(eloRatings[home], eloRatings[away], true) * this.MOMENTUM_FACTOR;
-                    eloRatings[home] += adj;
-                    eloRatings[away] -= adj;
-                }
-            },
-
-            simulateMatch(homeTeam, awayTeam, isKnockout, eloRatings) {
-                const homeElo = eloRatings?.[homeTeam] || this.teams[homeTeam]?.elo || 1500;
-                const awayElo = eloRatings?.[awayTeam] || this.teams[awayTeam]?.elo || 1500;
-                const mp = this.data.model_params;
-                const HOSTS = new Set(['Mexico', 'United States', 'Canada']);
-                let eloDiff = homeElo - awayElo;
-                if (HOSTS.has(homeTeam)) eloDiff += mp.home_advantage;
-                if (HOSTS.has(awayTeam)) eloDiff -= mp.home_advantage;
-                let lH = mp.base_rate * Math.exp(eloDiff / (2 * mp.scale));
-                let lA = mp.base_rate * Math.exp(-eloDiff / (2 * mp.scale));
-                lH = Math.max(0.1, Math.min(5, lH));
-                lA = Math.max(0.1, Math.min(5, lA));
-                let hg = this.poissonRandom(lH);
-                let ag = this.poissonRandom(lA);
-
-                if (isKnockout && hg === ag) {
-                    const avg = (lH + lA) / 2;
-                    hg += this.poissonRandom(Math.max(0.1, avg * 0.85 + (lH - avg) * 0.3));
-                    ag += this.poissonRandom(Math.max(0.1, avg * 0.85 + (lA - avg) * 0.3));
-                    if (hg === ag) {
-                        const wp = 1 / (1 + Math.pow(10, -(homeElo - awayElo) / 400));
-                        this._rng() < wp ? hg++ : ag++;
-                    }
-                }
-                return { hg, ag };
-            },
-
-            simulateGroupStage() {
-                const res = {};
-                const ms = {};
-                const simResults = {};
-                const eloRatings = {};
-                for (const [team, info] of Object.entries(this.teams)) {
-                    eloRatings[team] = info.elo;
-                }
-                for (const [g, gd] of Object.entries(this.data.groups)) {
-                    const st = {};
-                    for (const team of gd.teams)
-                        st[team] = { team, p:0, w:0, d:0, l:0, gf:0, ga:0, gd:0, pts:0 };
-                    ms[g] = {};
-                    simResults[g] = [];
-                    for (const m of gd.matches) {
-                        const key = m.home + '|' + m.away;
-                        let r;
-                        if (m.home_score !== null && m.home_score !== undefined) {
-                            r = { hg: m.home_score, ag: m.away_score };
-                            this.applyMomentum(eloRatings, m.home, m.away, r.hg, r.ag);
-                        } else {
-                            const edited = this.getEditedScore(m);
-                            if (edited !== null) {
-                                r = edited;
-                                this.applyMomentum(eloRatings, m.home, m.away, r.hg, r.ag);
+                    get sortedQualProbs() {
+                        const rows = [...this.filteredQualProbs];
+                        const col = this.qualSort;
+                        const dir = this.qualSortDesc ? -1 : 1;
+                        return rows.sort((a, b) => {
+                            let va, vb;
+                            if (col === "rank") {
+                                va = a.champion;
+                                vb = b.champion;
+                            } else if (col === "qualify") {
+                                va = a.groupWinner + a.groupRunnerUp;
+                                vb = b.groupWinner + b.groupRunnerUp;
+                            } else if (col === "winner") {
+                                va = a.champion;
+                                vb = b.champion;
                             } else {
-                                r = this.simulateMatch(m.home, m.away, false, eloRatings);
-                                this.applyMomentum(eloRatings, m.home, m.away, r.hg, r.ag);
+                                va = a[col];
+                                vb = b[col];
+                            }
+                            if (typeof va === "string") return va.localeCompare(vb) * dir;
+                            return (va - vb) * dir;
+                        });
+                    },
+
+                    sortQual(col) {
+                        if (this.qualSort === col) {
+                            this.qualSortDesc = !this.qualSortDesc;
+                        } else {
+                            this.qualSort = col;
+                            this.qualSortDesc = true;
+                        }
+                    },
+
+                    sortDir(col) {
+                        if (this.qualSort !== col) return "";
+                        return this.qualSortDesc ? "desc" : "asc";
+                    },
+
+                    delta(team, field) {
+                        const base = this.baselineStats[team];
+                        if (!base) return 0;
+                        const cur = this.stats[team]?.[field] ?? 0;
+                        const n = this.N || 1;
+                        return (cur / n - base[field]) * 100;
+                    },
+
+                    qualDelta(team) {
+                        const base = this.baselineStats[team];
+                        if (!base) return 0;
+                        const cur = this.stats[team] || {};
+                        const curPct = ((cur.groupWinner ?? 0) + (cur.groupRunnerUp ?? 0)) /
+                            (this.N || 1);
+                        const basePct = (base.groupWinner ?? 0) + (base.groupRunnerUp ?? 0);
+                        return (curPct - basePct) * 100;
+                    },
+
+                    deltaStr(d) {
+                        if (Math.abs(d) < 0.1) return "";
+                        return (d > 0 ? "+" : "") + d.toFixed(1) + "%";
+                    },
+
+                    deltaClass(d) {
+                        if (d > 0.5) return "positive";
+                        if (d < -0.5) return "negative";
+                        return "neutral";
+                    },
+
+                    lastBrackets: null,
+                    lastGroupResults: null,
+                    lastSimResults: {},
+                    groupLetters: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"],
+                    modalGroup: null,
+                    editedScores: {},
+
+                    async init() {
+                        try {
+                            const r = await fetch("data/simulation_data.json");
+                            this.data = await r.json();
+                            this.teams = this.data.teams;
+                            this.baselineStats = this.data.baseline_team_stats || {};
+                            this._rng = this.mulberry32(this.data.seed || 0);
+                            this.run();
+                        } catch (e) {
+                            alert("Failed to load data — run uv run build_data.py first.");
+                        }
+                    },
+
+                    mulberry32(a) {
+                        return () => {
+                            a |= 0;
+                            a = a + 0x6D2B79F5 | 0;
+                            let t = Math.imul(a ^ a >>> 15, 1 | a);
+                            t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+                            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+                        };
+                    },
+
+                    poissonRandom(lambda) {
+                        if (lambda <= 0) return 0;
+                        const L = Math.exp(-lambda);
+                        let k = 0, p = 1;
+                        do {
+                            k++;
+                            p *= this._rng();
+                        } while (p > L);
+                        return k - 1;
+                    },
+
+                    MOMENTUM_FACTOR: 1.8,
+
+                    eloAdjust(winnerElo, loserElo, drawn = false, k = 20) {
+                        const expected = 1 / (1 + Math.pow(10, (loserElo - winnerElo) / 400));
+                        if (drawn) return k * (0.5 - expected);
+                        return k * (1 - expected);
+                    },
+
+                    applyMomentum(eloRatings, home, away, hg, ag) {
+                        if (hg > ag) {
+                            const adj = this.eloAdjust(eloRatings[home], eloRatings[away]) *
+                                this.MOMENTUM_FACTOR;
+                            eloRatings[home] += adj;
+                            eloRatings[away] -= adj;
+                        } else if (hg < ag) {
+                            const adj = this.eloAdjust(eloRatings[away], eloRatings[home]) *
+                                this.MOMENTUM_FACTOR;
+                            eloRatings[away] += adj;
+                            eloRatings[home] -= adj;
+                        } else {
+                            const adj = this.eloAdjust(eloRatings[home], eloRatings[away], true) *
+                                this.MOMENTUM_FACTOR;
+                            eloRatings[home] += adj;
+                            eloRatings[away] -= adj;
+                        }
+                    },
+
+                    simulateMatch(homeTeam, awayTeam, isKnockout, eloRatings) {
+                        const homeElo = eloRatings?.[homeTeam] || this.teams[homeTeam]?.elo || 1500;
+                        const awayElo = eloRatings?.[awayTeam] || this.teams[awayTeam]?.elo || 1500;
+                        const mp = this.data.model_params;
+                        const HOSTS = new Set(["Mexico", "United States", "Canada"]);
+                        let eloDiff = homeElo - awayElo;
+                        if (HOSTS.has(homeTeam)) eloDiff += mp.home_advantage;
+                        if (HOSTS.has(awayTeam)) eloDiff -= mp.home_advantage;
+                        let lH = mp.base_rate * Math.exp(eloDiff / (2 * mp.scale));
+                        let lA = mp.base_rate * Math.exp(-eloDiff / (2 * mp.scale));
+                        lH = Math.max(0.1, Math.min(5, lH));
+                        lA = Math.max(0.1, Math.min(5, lA));
+                        let hg = this.poissonRandom(lH);
+                        let ag = this.poissonRandom(lA);
+
+                        if (isKnockout && hg === ag) {
+                            const avg = (lH + lA) / 2;
+                            hg += this.poissonRandom(Math.max(0.1, avg * 0.85 + (lH - avg) * 0.3));
+                            ag += this.poissonRandom(Math.max(0.1, avg * 0.85 + (lA - avg) * 0.3));
+                            if (hg === ag) {
+                                const wp = 1 / (1 + Math.pow(10, -(homeElo - awayElo) / 400));
+                                this._rng() < wp ? hg++ : ag++;
                             }
                         }
-                        simResults[g].push({ home: m.home, away: m.away, hg: r.hg, ag: r.ag, played: m.home_score !== null && m.home_score !== undefined });
-                        if (!ms[g][key]) ms[g][key] = { w: 0, d: 0, l: 0 };
-                        if (r.hg > r.ag) ms[g][key].w++;
-                        else if (r.hg < r.ag) ms[g][key].l++;
-                        else ms[g][key].d++;
+                        return { hg, ag };
+                    },
 
-                        const h = st[m.home], a = st[m.away];
-                        h.p++; a.p++;
-                        h.gf += r.hg; h.ga += r.ag;
-                        a.gf += r.ag; a.ga += r.hg;
-                        if (r.hg > r.ag) { h.w++; h.pts += 3; a.l++; }
-                        else if (r.hg < r.ag) { a.w++; a.pts += 3; h.l++; }
-                        else { h.d++; a.d++; h.pts++; a.pts++; }
-                    }
-                    for (const s of Object.values(st)) s.gd = s.gf - s.ga;
-                    const sorted = Object.values(st).sort((a, b) =>
-                        b.pts - a.pts || b.gd - a.gd || b.gf - a.gf
-                    );
-                    sorted.forEach((s, i) => s.pos = i + 1);
-                    res[g] = sorted;
-                }
-                return { groups: res, matchStats: ms, simResults, eloRatings };
-            },
-
-            bestThirdPlace(gr) {
-                const thirds = [];
-                for (const [g, st] of Object.entries(gr))
-                    thirds.push({ ...st.find(s => s.pos === 3), group: g });
-                thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
-                return thirds.slice(0, 8).map(t => t.team);
-            },
-
-            simulateKnockout(gr, eloRatings) {
-                const btp = this.bestThirdPlace(gr);
-                const resolve = (slot) => {
-                    if (slot.startsWith('1')) return gr[slot[1]]?.[0]?.team || null;
-                    if (slot.startsWith('2')) return gr[slot[1]]?.[1]?.team || null;
-                    if (slot.startsWith('3rd_')) return btp[parseInt(slot.split('_')[1]) - 1] || null;
-                    return null;
-                };
-                const b = {};
-                const rounds = ['round_of_32','round_of_16','quarter_finals','semi_finals'];
-                for (const rn of rounds) {
-                    b[rn] = [];
-                    for (const [hs, as] of this.data.knockout_bracket[rn]) {
-                        let home, away;
-                        if (hs.startsWith('R') || hs.startsWith('QF') || hs.startsWith('SF')) {
-                            const pr = hs.startsWith('R32') ? 'round_of_32' : hs.startsWith('R16') ? 'round_of_16' : hs.startsWith('QF') ? 'quarter_finals' : 'semi_finals';
-                            home = b[pr]?.[parseInt(hs.split('_M')[1])-1]?.winner || null;
-                        } else { home = resolve(hs); }
-                        if (as.startsWith('R') || as.startsWith('QF') || as.startsWith('SF')) {
-                            const pr = as.startsWith('R32') ? 'round_of_32' : as.startsWith('R16') ? 'round_of_16' : as.startsWith('QF') ? 'quarter_finals' : 'semi_finals';
-                            away = b[pr]?.[parseInt(as.split('_M')[1])-1]?.winner || null;
-                        } else { away = resolve(as); }
-                        if (!home || !away) { b[rn].push({ home: home||'TBD', away: away||'TBD', winner: null, hg: 0, ag: 0 }); continue; }
-                        const r = this.simulateMatch(home, away, true, eloRatings);
-                        this.applyMomentum(eloRatings, home, away, r.hg, r.ag);
-                        b[rn].push({ home, away, winner: r.hg >= r.ag ? home : away, hg: r.hg, ag: r.ag });
-                    }
-                }
-                const sf = b.semi_finals;
-                b.final = [];
-                if (sf?.length === 2 && sf[0].winner && sf[1].winner) {
-                    const r = this.simulateMatch(sf[0].winner, sf[1].winner, true, eloRatings);
-                    this.applyMomentum(eloRatings, sf[0].winner, sf[1].winner, r.hg, r.ag);
-                    b.final.push({ home: sf[0].winner, away: sf[1].winner, winner: r.hg >= r.ag ? sf[0].winner : sf[1].winner, hg: r.hg, ag: r.ag });
-                } else { b.final.push({ home: 'TBD', away: 'TBD', winner: null, hg: 0, ag: 0 }); }
-                return b;
-            },
-
-            expectedGroup(g) {
-                const teams = this.data?.groups?.[g]?.teams || [];
-                const matches = this.data?.groups?.[g]?.matches || [];
-                const n = this.N || 1;
-
-                // Current stats from played matches
-                const cur = {};
-                for (const team of teams) cur[team] = { p:0, w:0, d:0, l:0, gf:0, ga:0, gd:0, pts:0 };
-                for (const m of matches) {
-                    if (m.home_score === null || m.home_score === undefined) continue;
-                    const hg = m.home_score, ag = m.away_score;
-                    const h = cur[m.home], a = cur[m.away];
-                    h.p++; a.p++; h.gf += hg; h.ga += ag; a.gf += ag; a.ga += hg;
-                    if (hg > ag) { h.w++; h.pts += 3; a.l++; }
-                    else if (hg < ag) { a.w++; a.pts += 3; h.l++; }
-                    else { h.d++; a.d++; h.pts++; a.pts++; }
-                }
-
-                return teams.map(team => {
-                    const s = this.stats[team] || { totalPoints:0, totalGoalsFor:0, totalGoalsAgainst:0, matchesPlayed:0, groupWinner:0, groupRunnerUp:0, groupThird:0, groupFourth:0, totalWins:0, totalDraws:0, totalLosses:0 };
-                    const c = cur[team];
-                    const avgP = s.matchesPlayed / n;
-                    const avgW = s.totalWins / n;
-                    const avgD = s.totalDraws / n;
-                    const avgL = s.totalLosses / n;
-                    const avgGf = s.totalGoalsFor / n;
-                    const avgGa = s.totalGoalsAgainst / n;
-                    return {
-                        team,
-                        p: +(c.p + Math.max(0, avgP - c.p)).toFixed(1),
-                        w: +(c.w + Math.max(0, avgW - c.w)).toFixed(1),
-                        d: +(c.d + Math.max(0, avgD - c.d)).toFixed(1),
-                        l: +(c.l + Math.max(0, avgL - c.l)).toFixed(1),
-                        gf: +(c.gf + Math.max(0, avgGf - c.gf)).toFixed(1),
-                        ga: +(c.ga + Math.max(0, avgGa - c.ga)).toFixed(1),
-                        gd: +((c.gf - c.ga) + (avgGf - avgGa) - (c.gf - c.ga)).toFixed(1),
-                        pts: +(c.pts + Math.max(0, s.totalPoints / n - c.pts)).toFixed(1),
-                    };
-                }).sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
-            },
-
-            expectedGroupFull(g) {
-                const teams = this.data?.groups?.[g]?.teams || [];
-                const matches = this.data?.groups?.[g]?.matches || [];
-                const n = this.N || 1;
-
-                // Compute current stats from played matches only
-                const cur = {};
-                for (const team of teams) {
-                    cur[team] = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, gd: 0, pts: 0 };
-                }
-                for (const m of matches) {
-                    if (m.home_score === null || m.home_score === undefined) continue;
-                    const hg = m.home_score, ag = m.away_score;
-                    const h = cur[m.home], a = cur[m.away];
-                    h.p++; a.p++;
-                    h.gf += hg; h.ga += ag;
-                    a.gf += ag; a.ga += hg;
-                    if (hg > ag) { h.w++; h.pts += 3; a.l++; }
-                    else if (hg < ag) { a.w++; a.pts += 3; h.l++; }
-                    else { h.d++; a.d++; h.pts++; a.pts++; }
-                }
-                for (const team of teams) cur[team].gd = cur[team].gf - cur[team].ga;
-
-                // Expected total from simulation averages
-                return teams.map(team => {
-                    const s = this.stats[team] || { totalPoints:0, totalGoalsFor:0, totalGoalsAgainst:0, matchesPlayed:0, groupWinner:0, groupRunnerUp:0, groupThird:0, groupFourth:0, totalWins:0, totalDraws:0, totalLosses:0 };
-                    const avgPts = s.totalPoints / n;
-                    const avgGf = s.totalGoalsFor / n;
-                    const avgGa = s.totalGoalsAgainst / n;
-                    const avgP = s.matchesPlayed / n;
-                    const avgW = s.totalWins / n;
-                    const avgD = s.totalDraws / n;
-                    const avgL = s.totalLosses / n;
-                    const c = cur[team];
-                    return {
-                        team,
-                        cur: { ...c },
-                        exp: {
-                            p: Math.max(0, avgP - c.p),
-                            w: Math.max(0, avgW - c.w),
-                            d: Math.max(0, avgD - c.d),
-                            l: Math.max(0, avgL - c.l),
-                            gf: Math.max(0, avgGf - c.gf),
-                            ga: Math.max(0, avgGa - c.ga),
-                            gd: (avgGf - avgGa) - c.gd,
-                            pts: Math.max(0, avgPts - c.pts),
+                    simulateGroupStage() {
+                        const res = {};
+                        const ms = {};
+                        const simResults = {};
+                        const eloRatings = {};
+                        for (const [team, info] of Object.entries(this.teams)) {
+                            eloRatings[team] = info.elo;
                         }
-                    };
-                }).sort((a, b) => (b.cur.pts + b.exp.pts) - (a.cur.pts + a.exp.pts) || (b.cur.gd + b.exp.gd) - (a.cur.gd + a.exp.gd) || (b.cur.gf + b.exp.gf) - (a.cur.gf + a.exp.gf));
-            },
+                        for (const [g, gd] of Object.entries(this.data.groups)) {
+                            const st = {};
+                            for (const team of gd.teams) {
+                                st[team] = {
+                                    team,
+                                    p: 0,
+                                    w: 0,
+                                    d: 0,
+                                    l: 0,
+                                    gf: 0,
+                                    ga: 0,
+                                    gd: 0,
+                                    pts: 0,
+                                };
+                            }
+                            ms[g] = {};
+                            simResults[g] = [];
+                            for (const m of gd.matches) {
+                                const key = m.home + "|" + m.away;
+                                let r;
+                                if (m.home_score !== null && m.home_score !== undefined) {
+                                    r = { hg: m.home_score, ag: m.away_score };
+                                    this.applyMomentum(eloRatings, m.home, m.away, r.hg, r.ag);
+                                } else {
+                                    const edited = this.getEditedScore(m);
+                                    if (edited !== null) {
+                                        r = edited;
+                                        this.applyMomentum(eloRatings, m.home, m.away, r.hg, r.ag);
+                                    } else {
+                                        r = this.simulateMatch(m.home, m.away, false, eloRatings);
+                                        this.applyMomentum(eloRatings, m.home, m.away, r.hg, r.ag);
+                                    }
+                                }
+                                simResults[g].push({
+                                    home: m.home,
+                                    away: m.away,
+                                    hg: r.hg,
+                                    ag: r.ag,
+                                    played: m.home_score !== null && m.home_score !== undefined,
+                                });
+                                if (!ms[g][key]) ms[g][key] = { w: 0, d: 0, l: 0 };
+                                if (r.hg > r.ag) ms[g][key].w++;
+                                else if (r.hg < r.ag) ms[g][key].l++;
+                                else ms[g][key].d++;
 
-            groupSorted(g) {
-                const teams = this.data?.groups?.[g]?.teams || [];
-                return teams.map(team => ({
-                    team,
-                    s: this.stats[team] || { groupWinner:0, groupRunnerUp:0, groupThird:0, groupFourth:0, totalPoints:0, matchesPlayed:0 }
-                })).sort((a, b) => b.s.groupWinner - a.s.groupWinner || b.s.groupRunnerUp - a.s.groupRunnerUp);
-            },
+                                const h = st[m.home], a = st[m.away];
+                                h.p++;
+                                a.p++;
+                                h.gf += r.hg;
+                                h.ga += r.ag;
+                                a.gf += r.ag;
+                                a.ga += r.hg;
+                                if (r.hg > r.ag) {
+                                    h.w++;
+                                    h.pts += 3;
+                                    a.l++;
+                                } else if (r.hg < r.ag) {
+                                    a.w++;
+                                    a.pts += 3;
+                                    h.l++;
+                                } else {
+                                    h.d++;
+                                    a.d++;
+                                    h.pts++;
+                                    a.pts++;
+                                }
+                            }
+                            for (const s of Object.values(st)) s.gd = s.gf - s.ga;
+                            const sorted = Object.values(st).sort((a, b) =>
+                                b.pts - a.pts || b.gd - a.gd || b.gf - a.gf
+                            );
+                            sorted.forEach((s, i) => s.pos = i + 1);
+                            res[g] = sorted;
+                        }
+                        return { groups: res, matchStats: ms, simResults, eloRatings };
+                    },
 
-            expectedKnockout(round) {
-                const hasEdits = Object.keys(this.editedKoScores).length > 0;
-                if (hasEdits) {
-                    const b = this.computeKoBracket();
-                    return b?.[round] || [];
-                }
-                const last = this.lastBrackets?.[round] || [];
-                return last.map((m, i) => {
-                    const s = this.knockoutStats[round + '_' + i];
-                    if (!s || (!s.w && !s.d && !s.l)) return m;
-                    const n = s.w + s.d + s.l;
-                    const avgHg = s.hg / n;
-                    const avgAg = s.ag / n;
-                    return { ...m, hg: +avgHg.toFixed(1), ag: +avgAg.toFixed(1), winner: avgHg >= avgAg ? m.home : m.away };
-                });
-            },
+                    bestThirdPlace(gr) {
+                        const thirds = [];
+                        for (const [g, st] of Object.entries(gr)) {
+                            thirds.push({ ...st.find((s) => s.pos === 3), group: g });
+                        }
+                        thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+                        return thirds.slice(0, 8).map((t) => t.team);
+                    },
 
-            computeKoBracket() {
-                const gr = this.lastGroupResults;
-                if (!gr) return this.lastBrackets;
-                const btp = this.bestThirdPlace(gr);
-                const resolve = (slot) => {
-                    if (slot.startsWith('1')) return gr[slot[1]]?.[0]?.team || null;
-                    if (slot.startsWith('2')) return gr[slot[1]]?.[1]?.team || null;
-                    if (slot.startsWith('3rd_')) return btp[parseInt(slot.split('_')[1]) - 1] || null;
-                    return null;
-                };
-                const koResult = (rn, i, home, away) => {
-                    const edited = this.editedKoScores[rn + '_' + i];
-                    if (edited && edited.home === home && edited.away === away) {
-                        return { home, away, winner: edited.hg >= edited.ag ? home : away, hg: edited.hg, ag: edited.ag };
-                    }
-                    const s = this.knockoutStats[rn + '_' + i];
-                    if (s && (s.w || s.d || s.l)) {
+                    simulateKnockout(gr, eloRatings) {
+                        const btp = this.bestThirdPlace(gr);
+                        const resolve = (slot) => {
+                            if (slot.startsWith("1")) return gr[slot[1]]?.[0]?.team || null;
+                            if (slot.startsWith("2")) return gr[slot[1]]?.[1]?.team || null;
+                            if (slot.startsWith("3rd_")) {
+                                return btp[parseInt(slot.split("_")[1]) - 1] || null;
+                            }
+                            return null;
+                        };
+                        const b = {};
+                        const rounds = [
+                            "round_of_32",
+                            "round_of_16",
+                            "quarter_finals",
+                            "semi_finals",
+                        ];
+                        for (const rn of rounds) {
+                            b[rn] = [];
+                            for (const [hs, as] of this.data.knockout_bracket[rn]) {
+                                let home, away;
+                                if (
+                                    hs.startsWith("R") || hs.startsWith("QF") || hs.startsWith("SF")
+                                ) {
+                                    const pr = hs.startsWith("R32")
+                                        ? "round_of_32"
+                                        : hs.startsWith("R16")
+                                        ? "round_of_16"
+                                        : hs.startsWith("QF")
+                                        ? "quarter_finals"
+                                        : "semi_finals";
+                                    home = b[pr]?.[parseInt(hs.split("_M")[1]) - 1]?.winner || null;
+                                } else home = resolve(hs);
+                                if (
+                                    as.startsWith("R") || as.startsWith("QF") || as.startsWith("SF")
+                                ) {
+                                    const pr = as.startsWith("R32")
+                                        ? "round_of_32"
+                                        : as.startsWith("R16")
+                                        ? "round_of_16"
+                                        : as.startsWith("QF")
+                                        ? "quarter_finals"
+                                        : "semi_finals";
+                                    away = b[pr]?.[parseInt(as.split("_M")[1]) - 1]?.winner || null;
+                                } else away = resolve(as);
+                                if (!home || !away) {
+                                    b[rn].push({
+                                        home: home || "TBD",
+                                        away: away || "TBD",
+                                        winner: null,
+                                        hg: 0,
+                                        ag: 0,
+                                    });
+                                    continue;
+                                }
+                                const r = this.simulateMatch(home, away, true, eloRatings);
+                                this.applyMomentum(eloRatings, home, away, r.hg, r.ag);
+                                b[rn].push({
+                                    home,
+                                    away,
+                                    winner: r.hg >= r.ag ? home : away,
+                                    hg: r.hg,
+                                    ag: r.ag,
+                                });
+                            }
+                        }
+                        const sf = b.semi_finals;
+                        b.final = [];
+                        if (sf?.length === 2 && sf[0].winner && sf[1].winner) {
+                            const r = this.simulateMatch(
+                                sf[0].winner,
+                                sf[1].winner,
+                                true,
+                                eloRatings,
+                            );
+                            this.applyMomentum(eloRatings, sf[0].winner, sf[1].winner, r.hg, r.ag);
+                            b.final.push({
+                                home: sf[0].winner,
+                                away: sf[1].winner,
+                                winner: r.hg >= r.ag ? sf[0].winner : sf[1].winner,
+                                hg: r.hg,
+                                ag: r.ag,
+                            });
+                        } else {b.final.push({
+                                home: "TBD",
+                                away: "TBD",
+                                winner: null,
+                                hg: 0,
+                                ag: 0,
+                            });}
+                        return b;
+                    },
+
+                    expectedGroup(g) {
+                        const teams = this.data?.groups?.[g]?.teams || [];
+                        const matches = this.data?.groups?.[g]?.matches || [];
+                        const n = this.N || 1;
+
+                        // Current stats from played matches
+                        const cur = {};
+                        for (const team of teams) {
+                            cur[team] = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, gd: 0, pts: 0 };
+                        }
+                        for (const m of matches) {
+                            if (m.home_score === null || m.home_score === undefined) continue;
+                            const hg = m.home_score, ag = m.away_score;
+                            const h = cur[m.home], a = cur[m.away];
+                            h.p++;
+                            a.p++;
+                            h.gf += hg;
+                            h.ga += ag;
+                            a.gf += ag;
+                            a.ga += hg;
+                            if (hg > ag) {
+                                h.w++;
+                                h.pts += 3;
+                                a.l++;
+                            } else if (hg < ag) {
+                                a.w++;
+                                a.pts += 3;
+                                h.l++;
+                            } else {
+                                h.d++;
+                                a.d++;
+                                h.pts++;
+                                a.pts++;
+                            }
+                        }
+
+                        return teams.map((team) => {
+                            const s = this.stats[team] ||
+                                {
+                                    totalPoints: 0,
+                                    totalGoalsFor: 0,
+                                    totalGoalsAgainst: 0,
+                                    matchesPlayed: 0,
+                                    groupWinner: 0,
+                                    groupRunnerUp: 0,
+                                    groupThird: 0,
+                                    groupFourth: 0,
+                                    totalWins: 0,
+                                    totalDraws: 0,
+                                    totalLosses: 0,
+                                };
+                            const c = cur[team];
+                            const avgP = s.matchesPlayed / n;
+                            const avgW = s.totalWins / n;
+                            const avgD = s.totalDraws / n;
+                            const avgL = s.totalLosses / n;
+                            const avgGf = s.totalGoalsFor / n;
+                            const avgGa = s.totalGoalsAgainst / n;
+                            return {
+                                team,
+                                p: +(c.p + Math.max(0, avgP - c.p)).toFixed(1),
+                                w: +(c.w + Math.max(0, avgW - c.w)).toFixed(1),
+                                d: +(c.d + Math.max(0, avgD - c.d)).toFixed(1),
+                                l: +(c.l + Math.max(0, avgL - c.l)).toFixed(1),
+                                gf: +(c.gf + Math.max(0, avgGf - c.gf)).toFixed(1),
+                                ga: +(c.ga + Math.max(0, avgGa - c.ga)).toFixed(1),
+                                gd: +((c.gf - c.ga) + (avgGf - avgGa) - (c.gf - c.ga)).toFixed(1),
+                                pts: +(c.pts + Math.max(0, s.totalPoints / n - c.pts)).toFixed(1),
+                            };
+                        }).sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+                    },
+
+                    expectedGroupFull(g) {
+                        const teams = this.data?.groups?.[g]?.teams || [];
+                        const matches = this.data?.groups?.[g]?.matches || [];
+                        const n = this.N || 1;
+
+                        // Compute current stats from played matches only
+                        const cur = {};
+                        for (const team of teams) {
+                            cur[team] = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, gd: 0, pts: 0 };
+                        }
+                        for (const m of matches) {
+                            if (m.home_score === null || m.home_score === undefined) continue;
+                            const hg = m.home_score, ag = m.away_score;
+                            const h = cur[m.home], a = cur[m.away];
+                            h.p++;
+                            a.p++;
+                            h.gf += hg;
+                            h.ga += ag;
+                            a.gf += ag;
+                            a.ga += hg;
+                            if (hg > ag) {
+                                h.w++;
+                                h.pts += 3;
+                                a.l++;
+                            } else if (hg < ag) {
+                                a.w++;
+                                a.pts += 3;
+                                h.l++;
+                            } else {
+                                h.d++;
+                                a.d++;
+                                h.pts++;
+                                a.pts++;
+                            }
+                        }
+                        for (const team of teams) cur[team].gd = cur[team].gf - cur[team].ga;
+
+                        // Expected total from simulation averages
+                        return teams.map((team) => {
+                            const s = this.stats[team] ||
+                                {
+                                    totalPoints: 0,
+                                    totalGoalsFor: 0,
+                                    totalGoalsAgainst: 0,
+                                    matchesPlayed: 0,
+                                    groupWinner: 0,
+                                    groupRunnerUp: 0,
+                                    groupThird: 0,
+                                    groupFourth: 0,
+                                    totalWins: 0,
+                                    totalDraws: 0,
+                                    totalLosses: 0,
+                                };
+                            const avgPts = s.totalPoints / n;
+                            const avgGf = s.totalGoalsFor / n;
+                            const avgGa = s.totalGoalsAgainst / n;
+                            const avgP = s.matchesPlayed / n;
+                            const avgW = s.totalWins / n;
+                            const avgD = s.totalDraws / n;
+                            const avgL = s.totalLosses / n;
+                            const c = cur[team];
+                            return {
+                                team,
+                                cur: { ...c },
+                                exp: {
+                                    p: Math.max(0, avgP - c.p),
+                                    w: Math.max(0, avgW - c.w),
+                                    d: Math.max(0, avgD - c.d),
+                                    l: Math.max(0, avgL - c.l),
+                                    gf: Math.max(0, avgGf - c.gf),
+                                    ga: Math.max(0, avgGa - c.ga),
+                                    gd: (avgGf - avgGa) - c.gd,
+                                    pts: Math.max(0, avgPts - c.pts),
+                                },
+                            };
+                        }).sort((a, b) =>
+                            (b.cur.pts + b.exp.pts) - (a.cur.pts + a.exp.pts) ||
+                            (b.cur.gd + b.exp.gd) - (a.cur.gd + a.exp.gd) ||
+                            (b.cur.gf + b.exp.gf) - (a.cur.gf + a.exp.gf)
+                        );
+                    },
+
+                    groupSorted(g) {
+                        const teams = this.data?.groups?.[g]?.teams || [];
+                        return teams.map((team) => ({
+                            team,
+                            s: this.stats[team] ||
+                                {
+                                    groupWinner: 0,
+                                    groupRunnerUp: 0,
+                                    groupThird: 0,
+                                    groupFourth: 0,
+                                    totalPoints: 0,
+                                    matchesPlayed: 0,
+                                },
+                        })).sort((a, b) =>
+                            b.s.groupWinner - a.s.groupWinner ||
+                            b.s.groupRunnerUp - a.s.groupRunnerUp
+                        );
+                    },
+
+                    expectedKnockout(round) {
+                        const hasEdits = Object.keys(this.editedKoScores).length > 0;
+                        if (hasEdits) {
+                            const b = this.computeKoBracket();
+                            return b?.[round] || [];
+                        }
+                        const last = this.lastBrackets?.[round] || [];
+                        return last.map((m, i) => {
+                            const s = this.knockoutStats[round + "_" + i];
+                            if (!s || (!s.w && !s.d && !s.l)) return m;
+                            const n = s.w + s.d + s.l;
+                            const avgHg = s.hg / n;
+                            const avgAg = s.ag / n;
+                            return {
+                                ...m,
+                                hg: +avgHg.toFixed(1),
+                                ag: +avgAg.toFixed(1),
+                                winner: avgHg >= avgAg ? m.home : m.away,
+                            };
+                        });
+                    },
+
+                    computeKoBracket() {
+                        const gr = this.lastGroupResults;
+                        if (!gr) return this.lastBrackets;
+                        const btp = this.bestThirdPlace(gr);
+                        const resolve = (slot) => {
+                            if (slot.startsWith("1")) return gr[slot[1]]?.[0]?.team || null;
+                            if (slot.startsWith("2")) return gr[slot[1]]?.[1]?.team || null;
+                            if (slot.startsWith("3rd_")) {
+                                return btp[parseInt(slot.split("_")[1]) - 1] || null;
+                            }
+                            return null;
+                        };
+                        const koResult = (rn, i, home, away) => {
+                            const edited = this.editedKoScores[rn + "_" + i];
+                            if (edited && edited.home === home && edited.away === away) {
+                                return {
+                                    home,
+                                    away,
+                                    winner: edited.hg >= edited.ag ? home : away,
+                                    hg: edited.hg,
+                                    ag: edited.ag,
+                                };
+                            }
+                            const s = this.knockoutStats[rn + "_" + i];
+                            if (s && (s.w || s.d || s.l)) {
+                                const n = s.w + s.d + s.l;
+                                const avgHg = s.hg / n, avgAg = s.ag / n;
+                                return {
+                                    home,
+                                    away,
+                                    winner: avgHg >= avgAg ? home : away,
+                                    hg: +avgHg.toFixed(1),
+                                    ag: +avgAg.toFixed(1),
+                                };
+                            }
+                            return { home, away, winner: null, hg: 0, ag: 0 };
+                        };
+                        const b = {};
+                        const rounds = [
+                            "round_of_32",
+                            "round_of_16",
+                            "quarter_finals",
+                            "semi_finals",
+                        ];
+                        for (const rn of rounds) {
+                            b[rn] = [];
+                            for (let i = 0; i < this.data.knockout_bracket[rn].length; i++) {
+                                const [hs, as] = this.data.knockout_bracket[rn][i];
+                                let home, away;
+                                if (
+                                    hs.startsWith("R") || hs.startsWith("QF") || hs.startsWith("SF")
+                                ) {
+                                    const pr = hs.startsWith("R32")
+                                        ? "round_of_32"
+                                        : hs.startsWith("R16")
+                                        ? "round_of_16"
+                                        : hs.startsWith("QF")
+                                        ? "quarter_finals"
+                                        : "semi_finals";
+                                    home = b[pr]?.[parseInt(hs.split("_M")[1]) - 1]?.winner || null;
+                                } else home = resolve(hs);
+                                if (
+                                    as.startsWith("R") || as.startsWith("QF") || as.startsWith("SF")
+                                ) {
+                                    const pr = as.startsWith("R32")
+                                        ? "round_of_32"
+                                        : as.startsWith("R16")
+                                        ? "round_of_16"
+                                        : as.startsWith("QF")
+                                        ? "quarter_finals"
+                                        : "semi_finals";
+                                    away = b[pr]?.[parseInt(as.split("_M")[1]) - 1]?.winner || null;
+                                } else away = resolve(as);
+                                if (!home || !away) {
+                                    b[rn].push({
+                                        home: home || "TBD",
+                                        away: away || "TBD",
+                                        winner: null,
+                                        hg: 0,
+                                        ag: 0,
+                                    });
+                                    continue;
+                                }
+                                b[rn].push(koResult(rn, i, home, away));
+                            }
+                        }
+                        const sf = b.semi_finals;
+                        b.final = [];
+                        if (sf?.length === 2 && sf[0].winner && sf[1].winner) {
+                            b.final.push(koResult("final", 0, sf[0].winner, sf[1].winner));
+                        } else {b.final.push({
+                                home: "TBD",
+                                away: "TBD",
+                                winner: null,
+                                hg: 0,
+                                ag: 0,
+                            });}
+                        return b;
+                    },
+
+                    roundLabel(rn) {
+                        return {
+                            "round_of_32": "Round of 32",
+                            "round_of_16": "Round of 16",
+                            "quarter_finals": "Quarter-Finals",
+                            "semi_finals": "Semi-Finals",
+                            "final": "Final",
+                        }[rn] || rn;
+                    },
+
+                    groupMatches(g) {
+                        return this.data?.groups?.[g]?.matches || [];
+                    },
+
+                    simResultsForGroup(g) {
+                        const results = this.lastSimResults?.[g] || [];
+                        return results.filter((m) => {
+                            if (m.played) return true;
+                            const hk = m.home + "|" + m.away + "|home";
+                            const ak = m.home + "|" + m.away + "|away";
+                            return this.editedScores[hk] !== null &&
+                                this.editedScores[hk] !== undefined &&
+                                this.editedScores[ak] !== null &&
+                                this.editedScores[ak] !== undefined;
+                        });
+                    },
+
+                    matchStats(m, type) {
+                        const key = m.home + "|" + m.away;
+                        for (const [gr, gd] of Object.entries(this.data.groups)) {
+                            if (gd.teams.includes(m.home)) {
+                                return this.matchStatsMap?.[gr]?.[key]?.[type] || 0;
+                            }
+                        }
+                        return 0;
+                    },
+
+                    getScore(m, side) {
+                        const key = m.home + "|" + m.away + "|" + side;
+                        return this.editedScores[key] ?? "";
+                    },
+
+                    setScore(m, side, val) {
+                        const key = m.home + "|" + m.away + "|" + side;
+                        this.editedScores[key] = val === "" ? null : parseInt(val);
+                    },
+
+                    getEditedScore(m) {
+                        const hk = m.home + "|" + m.away + "|home";
+                        const ak = m.home + "|" + m.away + "|away";
+                        const hv = this.editedScores[hk];
+                        const av = this.editedScores[ak];
+                        if (hv !== null && hv !== undefined && av !== null && av !== undefined) {
+                            return { hg: hv, ag: av };
+                        }
+                        return null;
+                    },
+
+                    getKoScore(round, index, side) {
+                        const edit = this.editedKoScores[round + "_" + index];
+                        if (!edit) return "";
+                        return side === "home" ? edit.hg : edit.ag;
+                    },
+
+                    setKoScore(round, index, side, val) {
+                        const key = round + "_" + index;
+                        const m = this.lastBrackets?.[round]?.[index];
+                        if (!m || m.home === "TBD" || m.away === "TBD") return;
+                        if (val === "" || val === null || val === undefined) {
+                            delete this.editedKoScores[key];
+                            return;
+                        }
+                        if (!this.editedKoScores[key]) {
+                            this.editedKoScores[key] = { home: m.home, away: m.away, hg: 0, ag: 0 };
+                        }
+                        if (side === "home") this.editedKoScores[key].hg = parseInt(val);
+                        else this.editedKoScores[key].ag = parseInt(val);
+                    },
+
+                    openGroup(g) {
+                        this.modalGroup = g;
+                        this._modalSnapshot = JSON.stringify(this.editedScores);
+                    },
+
+                    closeModal() {
+                        this.modalGroup = null;
+                        if (JSON.stringify(this.editedScores) !== this._modalSnapshot) {
+                            this.run();
+                        }
+                        this._modalSnapshot = null;
+                    },
+
+                    reSimulate() {
+                        this.run();
+                    },
+
+                    openKnockout(round, index) {
+                        this.modalKnockout = { round, index };
+                    },
+
+                    closeKnockoutModal() {
+                        this.modalKnockout = null;
+                    },
+
+                    koStats(round, index) {
+                        return this.knockoutStats[round + "_" + index] ||
+                            { w: 0, d: 0, l: 0, hg: 0, ag: 0, scorelines: {} };
+                    },
+
+                    koScorelines(round, index) {
+                        const s = this.koStats(round, index);
                         const n = s.w + s.d + s.l;
-                        const avgHg = s.hg / n, avgAg = s.ag / n;
-                        return { home, away, winner: avgHg >= avgAg ? home : away, hg: +avgHg.toFixed(1), ag: +avgAg.toFixed(1) };
-                    }
-                    return { home, away, winner: null, hg: 0, ag: 0 };
+                        if (!n) return [];
+                        return Object.entries(s.scorelines)
+                            .map(([sl, count]) => ({ scoreline: sl, count, pct: count / n * 100 }))
+                            .sort((a, b) => b.count - a.count)
+                            .slice(0, 10);
+                    },
+
+                    get probHistory() {
+                        return this.data?.prob_history || { dates: [], qualify: {}, win: {} };
+                    },
+
+                    get chartKey() {
+                        return this.qualSort + "|" + this.qualSortDesc + "|" +
+                            (this.qualFilter || "") + "|" + this.N;
+                    },
+
+                    topNTeams(n) {
+                        return this.sortedQualProbs.slice(0, n).map((r) => r.team);
+                    },
+
+                    renderProbChart(type) {
+                        const el = type === "qualify"
+                            ? this.$refs.qualifyChart
+                            : this.$refs.winChart;
+                        if (!el || !this.probHistory.dates.length) return;
+                        const teams = this.topNTeams(10);
+                        if (!teams.length) return;
+                        const history = this.probHistory;
+                        const title = type === "qualify"
+                            ? "Qualify Probability Over Time"
+                            : "Champion Probability Over Time";
+                        const yLabel = type === "qualify" ? "Qualify (%)" : "Champion (%)";
+                        const shortDates = history.dates.map((d) =>
+                            d.startsWith("2026-") ? d.slice(5) : d
+                        );
+                        let yMax = 100;
+                        if (type === "win") {
+                            let mx = 0;
+                            for (const team of teams) {
+                                const vals = history.win[team];
+                                if (vals) mx = Math.max(mx, ...vals);
+                            }
+                            yMax = Math.ceil(mx * 1.15 / 5) * 5 || 5;
+                        }
+                        let def = 'xychart-beta\n  title "' + title + '"\n  x-axis "Date" ' +
+                            JSON.stringify(shortDates) + '\n  y-axis "' + yLabel + '" 0 --> ' +
+                            yMax + "\n";
+                        for (const team of teams) {
+                            const vals = type === "qualify"
+                                ? history.qualify[team]
+                                : history.win[team];
+                            if (!vals) continue;
+                            def += '  line "' + team + '" ' + JSON.stringify(vals) + "\n";
+                        }
+                        el.innerHTML = "";
+                        window.mermaidReady.render("chart-" + type + "-" + Date.now(), def)
+                            .then(({ svg }) => {
+                                el.innerHTML = svg;
+                                const svgEl = el.querySelector(
+                                    'svg[aria-roledescription="xychart"]',
+                                );
+                                if (!svgEl) return;
+                                const groups = svgEl.querySelectorAll('g[class^="line-plot-"]');
+                                const colors = [];
+                                groups.forEach((g) => {
+                                    const path = g.querySelector("path");
+                                    if (path) colors.push(path.getAttribute("stroke"));
+                                });
+                                const legend = document.createElement("div");
+                                legend.className = "chart-legend";
+                                teams.forEach((t, i) => {
+                                    const c = colors[i];
+                                    if (!c) return;
+                                    const item = document.createElement("span");
+                                    item.className = "legend-item";
+                                    item.innerHTML =
+                                        '<span class="legend-swatch" style="background:' + c +
+                                        '"></span>' + t;
+                                    legend.appendChild(item);
+                                });
+                                el.appendChild(legend);
+                            })
+                            .catch(() => {
+                                el.innerHTML = '<p style="color:#6b7280">Chart unavailable</p>';
+                            });
+                    },
+
+                    async renderKnockoutMermaid() {
+                        await this.$nextTick();
+                        const el = this.$refs.knockoutMermaid;
+                        if (!el || !this.modalKnockout) return;
+                        const { round, index } = this.modalKnockout;
+                        const scorelines = this.koScorelines(round, index);
+                        if (!scorelines.length) {
+                            el.innerHTML = '<p style="color:#6b7280">No data</p>';
+                            return;
+                        }
+                        const m = this.expectedKnockout(round)[index];
+                        const home = m?.home || "Home";
+                        const away = m?.away || "Away";
+                        const rows = ["sankey-beta"];
+                        const sorted = [...scorelines].sort((a, b) => {
+                            const [ahg, aag] = a.scoreline.split("-").map(Number);
+                            const [bhg, bag] = b.scoreline.split("-").map(Number);
+                            const aWin = ahg > aag ? home : ahg < aag ? away : "";
+                            const bWin = bhg > bag ? home : bhg < bag ? away : "";
+                            if (aWin !== bWin) return aWin.localeCompare(bWin);
+                            if (ahg !== bhg) return ahg - bhg;
+                            return aag - bag;
+                        });
+                        for (const s of sorted) {
+                            const [hg, ag] = s.scoreline.split("-").map(Number);
+                            const winner = hg > ag ? home : hg < ag ? away : null;
+                            const label = winner ? winner + " " + s.scoreline : s.scoreline;
+                            const src = hg > ag ? home : hg < ag ? away : "Draw";
+                            rows.push(src + "," + label + "," + s.count);
+                        }
+                        el.innerHTML = "";
+                        try {
+                            const { svg } = await window.mermaidReady.render(
+                                "ko-chart-" + Date.now(),
+                                rows.join("\n"),
+                            );
+                            el.innerHTML = svg;
+                        } catch (e) {
+                            el.innerHTML = '<p style="color:#6b7280">Chart unavailable</p>';
+                        }
+                    },
+
+                    async run() {
+                        if (!this.data) return;
+                        this.running = true;
+                        this.done = false;
+                        this.progress = 0;
+                        this.simMessage = "";
+                        const n = this.simCount;
+                        this.N = n;
+
+                        const stats = {};
+                        const matchStatsAcc = {};
+                        const koStats = {};
+                        for (const team of Object.keys(this.teams)) {
+                            stats[team] = {
+                                champion: 0,
+                                finalist: 0,
+                                semifinalist: 0,
+                                quarterfinalist: 0,
+                                round16: 0,
+                                round32: 0,
+                                groupWinner: 0,
+                                groupRunnerUp: 0,
+                                groupThird: 0,
+                                groupFourth: 0,
+                                totalPoints: 0,
+                                totalGoalsFor: 0,
+                                totalGoalsAgainst: 0,
+                                matchesPlayed: 0,
+                                totalWins: 0,
+                                totalDraws: 0,
+                                totalLosses: 0,
+                            };
+                        }
+                        for (const [g, gd] of Object.entries(this.data.groups)) {
+                            matchStatsAcc[g] = {};
+                            for (const m of gd.matches) {
+                                matchStatsAcc[g][m.home + "|" + m.away] = { w: 0, d: 0, l: 0 };
+                            }
+                        }
+
+                        let lastGr = null, lastB = null, lastSR = null;
+
+                        await new Promise((resolve) => {
+                            let i = 0;
+                            const BATCH = 200;
+                            const PROGRESS_STEPS = 10;
+                            let lastReportedStep = -1;
+                            const batch = () => {
+                                const end = Math.min(i + BATCH, n);
+                                for (; i < end; i++) {
+                                    const {
+                                        groups: gr,
+                                        matchStats: ms,
+                                        simResults: sr,
+                                        eloRatings,
+                                    } = this.simulateGroupStage();
+                                    for (const [g, st] of Object.entries(gr)) {
+                                        for (const s of st) {
+                                            const t = stats[s.team];
+                                            if (!t) continue;
+                                            t.totalPoints += s.pts;
+                                            t.totalGoalsFor += s.gf;
+                                            t.totalGoalsAgainst += s.ga;
+                                            t.matchesPlayed += s.p;
+                                            t.totalWins += s.w;
+                                            t.totalDraws += s.d;
+                                            t.totalLosses += s.l;
+                                            if (s.pos === 1) t.groupWinner++;
+                                            else if (s.pos === 2) t.groupRunnerUp++;
+                                            else if (s.pos === 3) t.groupThird++;
+                                            else t.groupFourth++;
+                                        }
+                                    }
+                                    for (const [g, gm] of Object.entries(ms)) {
+                                        for (const [key, val] of Object.entries(gm)) {
+                                            matchStatsAcc[g][key].w += val.w;
+                                            matchStatsAcc[g][key].d += val.d;
+                                            matchStatsAcc[g][key].l += val.l;
+                                        }
+                                    }
+                                    const b = this.simulateKnockout(gr, eloRatings);
+                                    const allRounds = [
+                                        "round_of_32",
+                                        "round_of_16",
+                                        "quarter_finals",
+                                        "semi_finals",
+                                        "final",
+                                    ];
+                                    for (const rn of allRounds) {
+                                        if (!b[rn]) continue;
+                                        for (let j = 0; j < b[rn].length; j++) {
+                                            const m = b[rn][j];
+                                            if (m.home === "TBD" || m.away === "TBD") continue;
+                                            const key = rn + "_" + j;
+                                            if (!koStats[key]) {
+                                                koStats[key] = {
+                                                    w: 0,
+                                                    d: 0,
+                                                    l: 0,
+                                                    hg: 0,
+                                                    ag: 0,
+                                                    scorelines: {},
+                                                };
+                                            }
+                                            const ks = koStats[key];
+                                            ks.hg += m.hg;
+                                            ks.ag += m.ag;
+                                            const sl = m.hg + "-" + m.ag;
+                                            ks.scorelines[sl] = (ks.scorelines[sl] || 0) + 1;
+                                            if (m.hg > m.ag) ks.w++;
+                                            else if (m.hg < m.ag) ks.l++;
+                                            else ks.d++;
+                                        }
+                                    }
+                                    const rounds = [
+                                        "round_of_32",
+                                        "round_of_16",
+                                        "quarter_finals",
+                                        "semi_finals",
+                                    ];
+                                    const inRound = {};
+                                    for (const rn of rounds) {
+                                        inRound[rn] = new Set();
+                                        if (b[rn]) {
+                                            for (const m of b[rn]) {
+                                                if (m.home && m.home !== "TBD") {
+                                                    inRound[rn].add(m.home);
+                                                }
+                                                if (m.away && m.away !== "TBD") {
+                                                    inRound[rn].add(m.away);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    for (const team of Object.keys(stats)) {
+                                        if (inRound.round_of_32?.has(team)) stats[team].round32++;
+                                        if (inRound.round_of_16?.has(team)) stats[team].round16++;
+                                        if (inRound.quarter_finals?.has(team)) {
+                                            stats[team].quarterfinalist++;
+                                        }
+                                        if (inRound.semi_finals?.has(team)) {
+                                            stats[team].semifinalist++;
+                                        }
+                                        if (b.final?.[0]) {
+                                            if (
+                                                b.final[0].home === team || b.final[0].away === team
+                                            ) stats[team].finalist++;
+                                            if (b.final[0].winner === team) stats[team].champion++;
+                                        }
+                                    }
+                                    lastGr = gr;
+                                    lastB = b;
+                                    lastSR = sr;
+                                }
+                                const step = Math.floor((i / n) * PROGRESS_STEPS);
+                                if (step > lastReportedStep) {
+                                    lastReportedStep = step;
+                                    this.progress = step * 10;
+                                    this.simMessage = this.simMessages[
+                                        Math.floor(Math.random() * this.simMessages.length)
+                                    ];
+                                }
+                                if (i < n) setTimeout(batch, 0);
+                                else {
+                                    this.stats = stats;
+                                    this.matchStatsMap = matchStatsAcc;
+                                    this.lastGroupResults = lastGr;
+                                    this.lastBrackets = lastB;
+                                    this.lastSimResults = lastSR;
+                                    this.knockoutStats = koStats;
+                                    const teamGroups = {};
+                                    for (const [g, gd] of Object.entries(this.data.groups)) {
+                                        for (const team of gd.teams) teamGroups[team] = g;
+                                    }
+                                    this.qualProbs = Object.entries(stats).map(([team, s]) => ({
+                                        team,
+                                        group: teamGroups[team] || "?",
+                                        elo: this.teams[team]?.elo || 0,
+                                        ...s,
+                                    })).sort((a, b) => b.champion - a.champion);
+                                    const thirds = [];
+                                    for (const g of this.groupLetters) {
+                                        const rows = this.expectedGroup(g);
+                                        if (rows[2]) thirds.push({ ...rows[2], group: g });
+                                    }
+                                    thirds.sort((a, b) =>
+                                        b.pts - a.pts || b.gd - a.gd || b.gf - a.gf
+                                    );
+                                    this.expectedThirds = thirds.slice(0, 8);
+                                    this.done = true;
+                                    this.running = false;
+                                    resolve();
+                                    setTimeout(() => {
+                                        this.renderProbChart("qualify");
+                                        this.renderProbChart("win");
+                                    }, 0);
+                                }
+                            };
+                            batch();
+                        });
+                    },
                 };
-                const b = {};
-                const rounds = ['round_of_32','round_of_16','quarter_finals','semi_finals'];
-                for (const rn of rounds) {
-                    b[rn] = [];
-                    for (let i = 0; i < this.data.knockout_bracket[rn].length; i++) {
-                        const [hs, as] = this.data.knockout_bracket[rn][i];
-                        let home, away;
-                        if (hs.startsWith('R') || hs.startsWith('QF') || hs.startsWith('SF')) {
-                            const pr = hs.startsWith('R32') ? 'round_of_32' : hs.startsWith('R16') ? 'round_of_16' : hs.startsWith('QF') ? 'quarter_finals' : 'semi_finals';
-                            home = b[pr]?.[parseInt(hs.split('_M')[1])-1]?.winner || null;
-                        } else { home = resolve(hs); }
-                        if (as.startsWith('R') || as.startsWith('QF') || as.startsWith('SF')) {
-                            const pr = as.startsWith('R32') ? 'round_of_32' : as.startsWith('R16') ? 'round_of_16' : as.startsWith('QF') ? 'quarter_finals' : 'semi_finals';
-                            away = b[pr]?.[parseInt(as.split('_M')[1])-1]?.winner || null;
-                        } else { away = resolve(as); }
-                        if (!home || !away) { b[rn].push({ home: home||'TBD', away: away||'TBD', winner: null, hg: 0, ag: 0 }); continue; }
-                        b[rn].push(koResult(rn, i, home, away));
-                    }
-                }
-                const sf = b.semi_finals;
-                b.final = [];
-                if (sf?.length === 2 && sf[0].winner && sf[1].winner) {
-                    b.final.push(koResult('final', 0, sf[0].winner, sf[1].winner));
-                } else { b.final.push({ home: 'TBD', away: 'TBD', winner: null, hg: 0, ag: 0 }); }
-                return b;
-            },
-
-            roundLabel(rn) {
-                return { 'round_of_32': 'Round of 32', 'round_of_16': 'Round of 16', 'quarter_finals': 'Quarter-Finals', 'semi_finals': 'Semi-Finals', 'final': 'Final' }[rn] || rn;
-            },
-
-            groupMatches(g) {
-                return this.data?.groups?.[g]?.matches || [];
-            },
-
-            simResultsForGroup(g) {
-                const results = this.lastSimResults?.[g] || [];
-                return results.filter(m => {
-                    if (m.played) return true;
-                    const hk = m.home + '|' + m.away + '|home';
-                    const ak = m.home + '|' + m.away + '|away';
-                    return this.editedScores[hk] !== null && this.editedScores[hk] !== undefined
-                        && this.editedScores[ak] !== null && this.editedScores[ak] !== undefined;
-                });
-            },
-
-            matchStats(m, type) {
-                const key = m.home + '|' + m.away;
-                for (const [gr, gd] of Object.entries(this.data.groups)) {
-                    if (gd.teams.includes(m.home)) {
-                        return this.matchStatsMap?.[gr]?.[key]?.[type] || 0;
-                    }
-                }
-                return 0;
-            },
-
-            getScore(m, side) {
-                const key = m.home + '|' + m.away + '|' + side;
-                return this.editedScores[key] ?? '';
-            },
-
-            setScore(m, side, val) {
-                const key = m.home + '|' + m.away + '|' + side;
-                this.editedScores[key] = val === '' ? null : parseInt(val);
-            },
-
-            getEditedScore(m) {
-                const hk = m.home + '|' + m.away + '|home';
-                const ak = m.home + '|' + m.away + '|away';
-                const hv = this.editedScores[hk];
-                const av = this.editedScores[ak];
-                if (hv !== null && hv !== undefined && av !== null && av !== undefined) {
-                    return { hg: hv, ag: av };
-                }
-                return null;
-            },
-
-            getKoScore(round, index, side) {
-                const edit = this.editedKoScores[round + '_' + index];
-                if (!edit) return '';
-                return side === 'home' ? edit.hg : edit.ag;
-            },
-
-            setKoScore(round, index, side, val) {
-                const key = round + '_' + index;
-                const m = this.lastBrackets?.[round]?.[index];
-                if (!m || m.home === 'TBD' || m.away === 'TBD') return;
-                if (val === '' || val === null || val === undefined) {
-                    delete this.editedKoScores[key];
-                    return;
-                }
-                if (!this.editedKoScores[key]) {
-                    this.editedKoScores[key] = { home: m.home, away: m.away, hg: 0, ag: 0 };
-                }
-                if (side === 'home') this.editedKoScores[key].hg = parseInt(val);
-                else this.editedKoScores[key].ag = parseInt(val);
-            },
-
-            openGroup(g) {
-                this.modalGroup = g;
-                this._modalSnapshot = JSON.stringify(this.editedScores);
-            },
-
-            closeModal() {
-                this.modalGroup = null;
-                if (JSON.stringify(this.editedScores) !== this._modalSnapshot) {
-                    this.run();
-                }
-                this._modalSnapshot = null;
-            },
-
-            reSimulate() {
-                this.run();
-            },
-
-            openKnockout(round, index) {
-                this.modalKnockout = { round, index };
-            },
-
-            closeKnockoutModal() {
-                this.modalKnockout = null;
-            },
-
-            koStats(round, index) {
-                return this.knockoutStats[round + '_' + index] || { w: 0, d: 0, l: 0, hg: 0, ag: 0, scorelines: {} };
-            },
-
-            koScorelines(round, index) {
-                const s = this.koStats(round, index);
-                const n = s.w + s.d + s.l;
-                if (!n) return [];
-                return Object.entries(s.scorelines)
-                    .map(([sl, count]) => ({ scoreline: sl, count, pct: count / n * 100 }))
-                    .sort((a, b) => b.count - a.count)
-                    .slice(0, 10);
-            },
-
-            get probHistory() {
-                return this.data?.prob_history || { dates: [], qualify: {}, win: {} };
-            },
-
-            get chartKey() {
-                return this.qualSort + '|' + this.qualSortDesc + '|' + (this.qualFilter || '') + '|' + this.N;
-            },
-
-            topNTeams(n) {
-                return this.sortedQualProbs.slice(0, n).map(r => r.team);
-            },
-
-            renderProbChart(type) {
-                const el = type === 'qualify' ? this.$refs.qualifyChart : this.$refs.winChart;
-                if (!el || !this.probHistory.dates.length) return;
-                const teams = this.topNTeams(10);
-                if (!teams.length) return;
-                const history = this.probHistory;
-                const title = type === 'qualify' ? 'Qualify Probability Over Time' : 'Champion Probability Over Time';
-                const yLabel = type === 'qualify' ? 'Qualify (%)' : 'Champion (%)';
-                const shortDates = history.dates.map(d => d.startsWith('2026-') ? d.slice(5) : d);
-                let yMax = 100;
-                if (type === 'win') {
-                    let mx = 0;
-                    for (const team of teams) {
-                        const vals = history.win[team];
-                        if (vals) mx = Math.max(mx, ...vals);
-                    }
-                    yMax = Math.ceil(mx * 1.15 / 5) * 5 || 5;
-                }
-                let def = 'xychart-beta\n  title "' + title + '"\n  x-axis "Date" ' + JSON.stringify(shortDates) + '\n  y-axis "' + yLabel + '" 0 --> ' + yMax + '\n';
-                for (const team of teams) {
-                    const vals = type === 'qualify' ? history.qualify[team] : history.win[team];
-                    if (!vals) continue;
-                    def += '  line "' + team + '" ' + JSON.stringify(vals) + '\n';
-                }
-                el.innerHTML = '';
-                window.mermaidReady.render('chart-' + type + '-' + Date.now(), def)
-                    .then(({ svg }) => {
-                        el.innerHTML = svg;
-                        const svgEl = el.querySelector('svg[aria-roledescription="xychart"]');
-                        if (!svgEl) return;
-                        const groups = svgEl.querySelectorAll('g[class^="line-plot-"]');
-                        const colors = [];
-                        groups.forEach(g => {
-                            const path = g.querySelector('path');
-                            if (path) colors.push(path.getAttribute('stroke'));
-                        });
-                        const legend = document.createElement('div');
-                        legend.className = 'chart-legend';
-                        teams.forEach((t, i) => {
-                            const c = colors[i];
-                            if (!c) return;
-                            const item = document.createElement('span');
-                            item.className = 'legend-item';
-                            item.innerHTML = '<span class="legend-swatch" style="background:' + c + '"></span>' + t;
-                            legend.appendChild(item);
-                        });
-                        el.appendChild(legend);
-                    })
-                    .catch(() => { el.innerHTML = '<p style="color:#6b7280">Chart unavailable</p>'; });
-            },
-
-            async renderKnockoutMermaid() {
-                await this.$nextTick();
-                const el = this.$refs.knockoutMermaid;
-                if (!el || !this.modalKnockout) return;
-                const { round, index } = this.modalKnockout;
-                const scorelines = this.koScorelines(round, index);
-                if (!scorelines.length) { el.innerHTML = '<p style="color:#6b7280">No data</p>'; return; }
-                const m = this.expectedKnockout(round)[index];
-                const home = m?.home || 'Home';
-                const away = m?.away || 'Away';
-                const rows = ['sankey-beta'];
-                const sorted = [...scorelines].sort((a, b) => {
-                    const [ahg, aag] = a.scoreline.split('-').map(Number);
-                    const [bhg, bag] = b.scoreline.split('-').map(Number);
-                    const aWin = ahg > aag ? home : ahg < aag ? away : '';
-                    const bWin = bhg > bag ? home : bhg < bag ? away : '';
-                    if (aWin !== bWin) return aWin.localeCompare(bWin);
-                    if (ahg !== bhg) return ahg - bhg;
-                    return aag - bag;
-                });
-                for (const s of sorted) {
-                    const [hg, ag] = s.scoreline.split('-').map(Number);
-                    const winner = hg > ag ? home : hg < ag ? away : null;
-                    const label = winner ? winner + ' ' + s.scoreline : s.scoreline;
-                    const src = hg > ag ? home : hg < ag ? away : 'Draw';
-                    rows.push(src + ',' + label + ',' + s.count);
-                }
-                el.innerHTML = '';
-                try {
-                    const { svg } = await window.mermaidReady.render('ko-chart-' + Date.now(), rows.join('\n'));
-                    el.innerHTML = svg;
-                } catch (e) {
-                    el.innerHTML = '<p style="color:#6b7280">Chart unavailable</p>';
-                }
-            },
-
-            async run() {
-                if (!this.data) return;
-                this.running = true;
-                this.done = false;
-                this.progress = 0;
-                this.simMessage = '';
-                const n = this.simCount;
-                this.N = n;
-
-                const stats = {};
-                const matchStatsAcc = {};
-                const koStats = {};
-                for (const team of Object.keys(this.teams)) {
-                    stats[team] = {
-                        champion:0, finalist:0, semifinalist:0, quarterfinalist:0,
-                        round16:0, round32:0, groupWinner:0, groupRunnerUp:0, groupThird:0, groupFourth:0,
-                        totalPoints:0, totalGoalsFor:0, totalGoalsAgainst:0, matchesPlayed:0,
-                        totalWins:0, totalDraws:0, totalLosses:0
-                    };
-                }
-                for (const [g, gd] of Object.entries(this.data.groups)) {
-                    matchStatsAcc[g] = {};
-                    for (const m of gd.matches) {
-                        matchStatsAcc[g][m.home + '|' + m.away] = { w: 0, d: 0, l: 0 };
-                    }
-                }
-
-                let lastGr = null, lastB = null, lastSR = null;
-
-                await new Promise(resolve => {
-                    let i = 0;
-                    const BATCH = 200;
-                    const PROGRESS_STEPS = 10;
-                    let lastReportedStep = -1;
-                    const batch = () => {
-                        const end = Math.min(i + BATCH, n);
-                        for (; i < end; i++) {
-                            const { groups: gr, matchStats: ms, simResults: sr, eloRatings } = this.simulateGroupStage();
-                            for (const [g, st] of Object.entries(gr)) {
-                                for (const s of st) {
-                                    const t = stats[s.team]; if (!t) continue;
-                                    t.totalPoints += s.pts; t.totalGoalsFor += s.gf; t.totalGoalsAgainst += s.ga; t.matchesPlayed += s.p;
-                                    t.totalWins += s.w; t.totalDraws += s.d; t.totalLosses += s.l;
-                                    if (s.pos===1) t.groupWinner++; else if (s.pos===2) t.groupRunnerUp++; else if (s.pos===3) t.groupThird++; else t.groupFourth++;
-                                }
-                            }
-                            for (const [g, gm] of Object.entries(ms)) {
-                                for (const [key, val] of Object.entries(gm)) {
-                                    matchStatsAcc[g][key].w += val.w;
-                                    matchStatsAcc[g][key].d += val.d;
-                                    matchStatsAcc[g][key].l += val.l;
-                                }
-                            }
-                            const b = this.simulateKnockout(gr, eloRatings);
-                            const allRounds = ['round_of_32','round_of_16','quarter_finals','semi_finals','final'];
-                            for (const rn of allRounds) {
-                                if (!b[rn]) continue;
-                                for (let j = 0; j < b[rn].length; j++) {
-                                    const m = b[rn][j];
-                                    if (m.home === 'TBD' || m.away === 'TBD') continue;
-                                    const key = rn + '_' + j;
-                                    if (!koStats[key]) koStats[key] = { w: 0, d: 0, l: 0, hg: 0, ag: 0, scorelines: {} };
-                                    const ks = koStats[key];
-                                    ks.hg += m.hg; ks.ag += m.ag;
-                                    const sl = m.hg + '-' + m.ag;
-                                    ks.scorelines[sl] = (ks.scorelines[sl] || 0) + 1;
-                                    if (m.hg > m.ag) ks.w++; else if (m.hg < m.ag) ks.l++; else ks.d++;
-                                }
-                            }
-                            const rounds = ['round_of_32','round_of_16','quarter_finals','semi_finals'];
-                            const inRound = {};
-                            for (const rn of rounds) { inRound[rn] = new Set(); if (b[rn]) for (const m of b[rn]) { if (m.home&&m.home!=='TBD') inRound[rn].add(m.home); if (m.away&&m.away!=='TBD') inRound[rn].add(m.away); } }
-                            for (const team of Object.keys(stats)) {
-                                if (inRound.round_of_32?.has(team)) stats[team].round32++;
-                                if (inRound.round_of_16?.has(team)) stats[team].round16++;
-                                if (inRound.quarter_finals?.has(team)) stats[team].quarterfinalist++;
-                                if (inRound.semi_finals?.has(team)) stats[team].semifinalist++;
-                                if (b.final?.[0]) { if (b.final[0].home===team||b.final[0].away===team) stats[team].finalist++; if (b.final[0].winner===team) stats[team].champion++; }
-                            }
-                            lastGr = gr;
-                            lastB = b;
-                            lastSR = sr;
-                        }
-                        const step = Math.floor((i / n) * PROGRESS_STEPS);
-                        if (step > lastReportedStep) {
-                            lastReportedStep = step;
-                            this.progress = step * 10;
-                            this.simMessage = this.simMessages[Math.floor(Math.random() * this.simMessages.length)];
-                        }
-                        if (i < n) setTimeout(batch, 0);
-                        else {
-                            this.stats = stats;
-                            this.matchStatsMap = matchStatsAcc;
-                            this.lastGroupResults = lastGr;
-                            this.lastBrackets = lastB;
-                            this.lastSimResults = lastSR;
-                            this.knockoutStats = koStats;
-                            const teamGroups = {};
-                            for (const [g, gd] of Object.entries(this.data.groups)) {
-                                for (const team of gd.teams) teamGroups[team] = g;
-                            }
-                            this.qualProbs = Object.entries(stats).map(([team, s]) => ({ team, group: teamGroups[team] || '?', elo: this.teams[team]?.elo||0, ...s })).sort((a, b) => b.champion - a.champion);
-                            const thirds = [];
-                            for (const g of this.groupLetters) {
-                                const rows = this.expectedGroup(g);
-                                if (rows[2]) thirds.push({ ...rows[2], group: g });
-                            }
-                            thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
-                            this.expectedThirds = thirds.slice(0, 8);
-                            this.done = true;
-                            this.running = false;
-                            resolve();
-                            setTimeout(() => { this.renderProbChart('qualify'); this.renderProbChart('win'); }, 0);
-                        }
-                    };
-                    batch();
-                });
             }
-        };
-    }
-    </script>
-</body>
+        </script>
+    </body>
 </html>

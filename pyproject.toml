@@ -10,3 +10,11 @@ dependencies = [
     "scikit-learn>=1.9.0",
     "scipy>=1.17.1",
 ]
+
+[dependency-groups]
+dev = [
+    "deno>=2.8.3",
+    "pytest>=9.1.0",
+    "ruff>=0.15.17",
+    "ty>=0.0.49",
+]

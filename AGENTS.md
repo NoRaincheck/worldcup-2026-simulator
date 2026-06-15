@@ -44,12 +44,12 @@ Open `index.html` directly in a browser (file:// protocol works, no server neede
 
 ### Key data files
 
-| File | Description |
-|------|-------------|
-| `data/elo_ratings_wc2026.csv` | ELO ratings for all 48 qualified teams, 1901–2026 |
-| `data/international_results/results.csv` | 49,000+ international match results, 1872–2026 |
-| `data/results.json` | Manually updated match results for played WC 2026 games |
-| `data/simulation_data.json` | Generated JSON consumed by the frontend |
+| File                                     | Description                                             |
+| ---------------------------------------- | ------------------------------------------------------- |
+| `data/elo_ratings_wc2026.csv`            | ELO ratings for all 48 qualified teams, 1901–2026       |
+| `data/international_results/results.csv` | 49,000+ international match results, 1872–2026          |
+| `data/results.json`                      | Manually updated match results for played WC 2026 games |
+| `data/simulation_data.json`              | Generated JSON consumed by the frontend                 |
 
 ### Name mapping
 
@@ -71,6 +71,7 @@ The ELO-based Poisson model:
 ```
 
 Calibrated parameters (from `build_data.py` output):
+
 - `base_rate`: ~1.15 goals/team/match
 - `scale`: ~250 ELO points
 - `home_advantage`: ~90 ELO points

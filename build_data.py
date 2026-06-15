@@ -34,20 +34,38 @@ HOSTS = {"Mexico", "United States", "Canada"}
 
 KNOCKOUT_BRACKET = {
     "round_of_32": [
-        ["1A", "3rd_1"], ["2C", "2F"], ["1B", "3rd_2"], ["1E", "2D"],
-        ["1G", "3rd_3"], ["2H", "2I"], ["1K", "3rd_4"], ["1L", "2J"],
-        ["1F", "3rd_5"], ["2A", "2E"], ["1D", "3rd_6"], ["1I", "2K"],
-        ["1H", "3rd_7"], ["2G", "2L"], ["1J", "3rd_8"], ["1C", "2B"],
+        ["1A", "3rd_1"],
+        ["2C", "2F"],
+        ["1B", "3rd_2"],
+        ["1E", "2D"],
+        ["1G", "3rd_3"],
+        ["2H", "2I"],
+        ["1K", "3rd_4"],
+        ["1L", "2J"],
+        ["1F", "3rd_5"],
+        ["2A", "2E"],
+        ["1D", "3rd_6"],
+        ["1I", "2K"],
+        ["1H", "3rd_7"],
+        ["2G", "2L"],
+        ["1J", "3rd_8"],
+        ["1C", "2B"],
     ],
     "round_of_16": [
-        ["R32_M1", "R32_M2"], ["R32_M3", "R32_M4"],
-        ["R32_M5", "R32_M6"], ["R32_M7", "R32_M8"],
-        ["R32_M9", "R32_M10"], ["R32_M11", "R32_M12"],
-        ["R32_M13", "R32_M14"], ["R32_M15", "R32_M16"],
+        ["R32_M1", "R32_M2"],
+        ["R32_M3", "R32_M4"],
+        ["R32_M5", "R32_M6"],
+        ["R32_M7", "R32_M8"],
+        ["R32_M9", "R32_M10"],
+        ["R32_M11", "R32_M12"],
+        ["R32_M13", "R32_M14"],
+        ["R32_M15", "R32_M16"],
     ],
     "quarter_finals": [
-        ["R16_M1", "R16_M2"], ["R16_M3", "R16_M4"],
-        ["R16_M5", "R16_M6"], ["R16_M7", "R16_M8"],
+        ["R16_M1", "R16_M2"],
+        ["R16_M3", "R16_M4"],
+        ["R16_M5", "R16_M6"],
+        ["R16_M7", "R16_M8"],
     ],
     "semi_finals": [["QF_M1", "QF_M2"], ["QF_M3", "QF_M4"]],
     "final": [["SF_M1", "SF_M2"]],
@@ -99,21 +117,27 @@ def build_fixtures(played_results):
         reader = csv.DictReader(f)
         for row in reader:
             if row["tournament"] == "FIFA World Cup" and row["date"] >= "2026-06-11":
-                fixtures.append({
-                    "home": row["home_team"],
-                    "away": row["away_team"],
-                    "date": row["date"],
-                    "venue": row["city"],
-                    "country": row["country"],
-                    "neutral": row["neutral"] == "TRUE",
-                })
+                fixtures.append(
+                    {
+                        "home": row["home_team"],
+                        "away": row["away_team"],
+                        "date": row["date"],
+                        "venue": row["city"],
+                        "country": row["country"],
+                        "neutral": row["neutral"] == "TRUE",
+                    }
+                )
 
     # Merge played results
     for date, matches in played_results.items():
         for m in matches:
             key = (m["home"], m["away"])
             for fix in fixtures:
-                if fix["date"] == date and fix["home"] == m["home"] and fix["away"] == m["away"]:
+                if (
+                    fix["date"] == date
+                    and fix["home"] == m["home"]
+                    and fix["away"] == m["away"]
+                ):
                     fix["home_score"] = m["home_score"]
                     fix["away_score"] = m["away_score"]
                     break
@@ -152,12 +176,18 @@ def calibrate_model(results_file):
                 continue
             tournament = row["tournament"]
             if tournament not in (
-                "FIFA World Cup", "FIFA World Cup qualification",
-                "UEFA Euro", "UEFA Euro qualification",
-                "Copa América", "Copa América qualification",
-                "Africa Cup of Nations", "Africa Cup of Nations qualification",
-                "Asian Cup", "Asian Cup qualification",
-                "CONCACAF Gold Cup", "CONCACAF Gold Cup qualification",
+                "FIFA World Cup",
+                "FIFA World Cup qualification",
+                "UEFA Euro",
+                "UEFA Euro qualification",
+                "Copa América",
+                "Copa América qualification",
+                "Africa Cup of Nations",
+                "Africa Cup of Nations qualification",
+                "Asian Cup",
+                "Asian Cup qualification",
+                "CONCACAF Gold Cup",
+                "CONCACAF Gold Cup qualification",
                 "FIFA World Cup qualification (inter-confederation playoffs)",
             ):
                 continue
@@ -165,11 +195,15 @@ def calibrate_model(results_file):
             away_elo = elo_by_team_year.get(row["away_team"], {}).get(year)
             if not home_elo or not away_elo:
                 continue
-            matches.append({
-                "home_elo": home_elo, "away_elo": away_elo,
-                "home_goals": int(row["home_score"]), "away_goals": int(row["away_score"]),
-                "neutral": row["neutral"] == "TRUE",
-            })
+            matches.append(
+                {
+                    "home_elo": home_elo,
+                    "away_elo": away_elo,
+                    "home_goals": int(row["home_score"]),
+                    "away_goals": int(row["away_score"]),
+                    "neutral": row["neutral"] == "TRUE",
+                }
+            )
 
     if not matches:
         return {"base_rate": 1.35, "scale": 400, "home_advantage": 100}
@@ -184,18 +218,27 @@ def calibrate_model(results_file):
                     elo_diff = m["home_elo"] - m["away_elo"]
                     if not m["neutral"]:
                         elo_diff += home_adv
-                    lh = max(0.1, min(5.0, base_rate * math.exp(elo_diff / (2 * scale))))
-                    la = max(0.1, min(5.0, base_rate * math.exp(-elo_diff / (2 * scale))))
+                    lh = max(
+                        0.1, min(5.0, base_rate * math.exp(elo_diff / (2 * scale)))
+                    )
+                    la = max(
+                        0.1, min(5.0, base_rate * math.exp(-elo_diff / (2 * scale)))
+                    )
                     loss += (lh - m["home_goals"]) ** 2 + (la - m["away_goals"]) ** 2
                 if loss < best_loss:
                     best_loss = loss
-                    best_params = {"base_rate": base_rate, "scale": scale, "home_advantage": home_adv}
+                    best_params = {
+                        "base_rate": base_rate,
+                        "scale": scale,
+                        "home_advantage": home_adv,
+                    }
     return best_params
 
 
 def strip_played_results(data):
     """Deep-copy data and clear all played match scores for baseline simulation."""
     import copy
+
     d = copy.deepcopy(data)
     for g, info in d["groups"].items():
         for m in info["matches"]:
@@ -229,6 +272,7 @@ def poisson_random(lam, rng):
 
 MOMENTUM_FACTOR = 1.8  # Multiplier for ELO adjustments during tournament
 
+
 def elo_adjust(winner_elo, loser_elo, drawn=False, k=20):
     """Calculate ELO adjustment with momentum factor."""
     expected = 1 / (1 + 10 ** ((loser_elo - winner_elo) / 400))
@@ -236,7 +280,10 @@ def elo_adjust(winner_elo, loser_elo, drawn=False, k=20):
         return k * (0.5 - expected)
     return k * (1 - expected)
 
-def sim_match(home_elo, away_elo, params, rng, knockout=False, home_team=None, away_team=None):
+
+def sim_match(
+    home_elo, away_elo, params, rng, knockout=False, home_team=None, away_team=None
+):
     elo_diff = home_elo - away_elo
     ha = params["home_advantage"]
     if home_team in HOSTS:
@@ -261,6 +308,7 @@ def sim_match(home_elo, away_elo, params, rng, knockout=False, home_team=None, a
                 ag += 1
     return hg, ag
 
+
 def apply_momentum(elo_ratings, home, away, hg, ag):
     """Apply momentum-adjusted ELO changes after a match."""
     if hg > ag:
@@ -272,7 +320,10 @@ def apply_momentum(elo_ratings, home, away, hg, ag):
         elo_ratings[away] += adj
         elo_ratings[home] -= adj
     else:
-        adj = elo_adjust(elo_ratings[home], elo_ratings[away], drawn=True) * MOMENTUM_FACTOR
+        adj = (
+            elo_adjust(elo_ratings[home], elo_ratings[away], drawn=True)
+            * MOMENTUM_FACTOR
+        )
         elo_ratings[home] += adj
         elo_ratings[away] -= adj
 
@@ -282,50 +333,116 @@ def best_third_from_standings(sorted_groups):
     for g, st in sorted_groups.items():
         if len(st) >= 3:
             t = st[2]
-            thirds.append({"team": t["team"], "group": g, "pts": t["pts"], "gd": t["gd"], "gf": t["gf"]})
+            thirds.append(
+                {
+                    "team": t["team"],
+                    "group": g,
+                    "pts": t["pts"],
+                    "gd": t["gd"],
+                    "gf": t["gf"],
+                }
+            )
     thirds.sort(key=lambda x: (-x["pts"], -x["gd"], -x["gf"]))
     return thirds[:8]
 
 
 def sim_knockout(sorted_groups, bracket, elo_ratings, params, rng):
     btp = best_third_from_standings(sorted_groups)
+
     def resolve(slot):
         if slot.startswith("1"):
             g = slot[1]
-            return sorted_groups[g][0]["team"] if g in sorted_groups and sorted_groups[g] else None
+            return (
+                sorted_groups[g][0]["team"]
+                if g in sorted_groups and sorted_groups[g]
+                else None
+            )
         if slot.startswith("2"):
             g = slot[1]
-            return sorted_groups[g][1]["team"] if g in sorted_groups and len(sorted_groups[g]) > 1 else None
+            return (
+                sorted_groups[g][1]["team"]
+                if g in sorted_groups and len(sorted_groups[g]) > 1
+                else None
+            )
         if slot.startswith("3rd_"):
             idx = int(slot.split("_")[1]) - 1
             return btp[idx]["team"] if idx < len(btp) else None
         return None
+
     b = {}
     for rn in ["round_of_32", "round_of_16", "quarter_finals", "semi_finals"]:
         b[rn] = []
         for hs, as_ in bracket[rn]:
             if hs.startswith(("R", "QF", "SF")):
-                pr = "round_of_32" if hs.startswith("R32") else "round_of_16" if hs.startswith("R16") else "quarter_finals" if hs.startswith("QF") else "semi_finals"
-                home = b[pr][int(hs.split("_M")[1]) - 1]["winner"] if b.get(pr) else None
+                pr = (
+                    "round_of_32"
+                    if hs.startswith("R32")
+                    else "round_of_16"
+                    if hs.startswith("R16")
+                    else "quarter_finals"
+                    if hs.startswith("QF")
+                    else "semi_finals"
+                )
+                home = (
+                    b[pr][int(hs.split("_M")[1]) - 1]["winner"] if b.get(pr) else None
+                )
             else:
                 home = resolve(hs)
             if as_.startswith(("R", "QF", "SF")):
-                pr = "round_of_32" if as_.startswith("R32") else "round_of_16" if as_.startswith("R16") else "quarter_finals" if as_.startswith("QF") else "semi_finals"
-                away = b[pr][int(as_.split("_M")[1]) - 1]["winner"] if b.get(pr) else None
+                pr = (
+                    "round_of_32"
+                    if as_.startswith("R32")
+                    else "round_of_16"
+                    if as_.startswith("R16")
+                    else "quarter_finals"
+                    if as_.startswith("QF")
+                    else "semi_finals"
+                )
+                away = (
+                    b[pr][int(as_.split("_M")[1]) - 1]["winner"] if b.get(pr) else None
+                )
             else:
                 away = resolve(as_)
             if not home or not away:
-                b[rn].append({"home": home or "TBD", "away": away or "TBD", "winner": None, "hg": 0, "ag": 0})
+                b[rn].append(
+                    {
+                        "home": home or "TBD",
+                        "away": away or "TBD",
+                        "winner": None,
+                        "hg": 0,
+                        "ag": 0,
+                    }
+                )
                 continue
-            hg, ag = sim_match(elo_ratings[home], elo_ratings[away], params, rng, True, home_team=home, away_team=away)
+            hg, ag = sim_match(
+                elo_ratings[home],
+                elo_ratings[away],
+                params,
+                rng,
+                True,
+                home_team=home,
+                away_team=away,
+            )
             apply_momentum(elo_ratings, home, away, hg, ag)
-            b[rn].append({"home": home, "away": away, "winner": home if hg >= ag else away, "hg": hg, "ag": ag})
+            b[rn].append(
+                {
+                    "home": home,
+                    "away": away,
+                    "winner": home if hg >= ag else away,
+                    "hg": hg,
+                    "ag": ag,
+                }
+            )
     sf = b.get("semi_finals", [])
     if len(sf) == 2 and sf[0]["winner"] and sf[1]["winner"]:
         h, a = sf[0]["winner"], sf[1]["winner"]
-        hg, ag = sim_match(elo_ratings[h], elo_ratings[a], params, rng, True, home_team=h, away_team=a)
+        hg, ag = sim_match(
+            elo_ratings[h], elo_ratings[a], params, rng, True, home_team=h, away_team=a
+        )
         apply_momentum(elo_ratings, h, a, hg, ag)
-        b["final"] = [{"home": h, "away": a, "winner": h if hg >= ag else a, "hg": hg, "ag": ag}]
+        b["final"] = [
+            {"home": h, "away": a, "winner": h if hg >= ag else a, "hg": hg, "ag": ag}
+        ]
     else:
         b["final"] = [{"home": "TBD", "away": "TBD", "winner": None, "hg": 0, "ag": 0}]
     return b
@@ -338,13 +455,28 @@ def run_simulation(data, n=10000):
     seed = data["seed"]
     rng = random.Random(seed)
 
-    team_stats = {t: {
-        "champion": 0, "finalist": 0, "semifinalist": 0, "quarterfinalist": 0,
-        "round16": 0, "round32": 0,
-        "groupWinner": 0, "groupRunnerUp": 0, "groupThird": 0, "groupFourth": 0,
-        "totalPoints": 0.0, "totalGoalsFor": 0.0, "totalGoalsAgainst": 0.0, "matchesPlayed": 0.0,
-        "totalWins": 0.0, "totalDraws": 0.0, "totalLosses": 0.0,
-    } for t in teams}
+    team_stats = {
+        t: {
+            "champion": 0,
+            "finalist": 0,
+            "semifinalist": 0,
+            "quarterfinalist": 0,
+            "round16": 0,
+            "round32": 0,
+            "groupWinner": 0,
+            "groupRunnerUp": 0,
+            "groupThird": 0,
+            "groupFourth": 0,
+            "totalPoints": 0.0,
+            "totalGoalsFor": 0.0,
+            "totalGoalsAgainst": 0.0,
+            "matchesPlayed": 0.0,
+            "totalWins": 0.0,
+            "totalDraws": 0.0,
+            "totalLosses": 0.0,
+        }
+        for t in teams
+    }
 
     match_stats = {}
     for g, info in data["groups"].items():
@@ -358,62 +490,120 @@ def run_simulation(data, n=10000):
         elo_ratings = {t: teams[t]["elo"] for t in teams}
         sorted_groups = {}
         for g, info in data["groups"].items():
-            st = {t: {"team": t, "p": 0, "w": 0, "d": 0, "l": 0, "gf": 0, "ga": 0, "pts": 0} for t in info["teams"]}
+            st = {
+                t: {
+                    "team": t,
+                    "p": 0,
+                    "w": 0,
+                    "d": 0,
+                    "l": 0,
+                    "gf": 0,
+                    "ga": 0,
+                    "pts": 0,
+                }
+                for t in info["teams"]
+            }
             for m in info["matches"]:
                 home, away = m["home"], m["away"]
                 if m.get("home_score") is not None:
                     hg, ag = m["home_score"], m["away_score"]
                 else:
-                    hg, ag = sim_match(elo_ratings[home], elo_ratings[away], params, rng, home_team=home, away_team=away)
+                    hg, ag = sim_match(
+                        elo_ratings[home],
+                        elo_ratings[away],
+                        params,
+                        rng,
+                        home_team=home,
+                        away_team=away,
+                    )
                 apply_momentum(elo_ratings, home, away, hg, ag)
                 h, a = st[home], st[away]
-                h["p"] += 1; a["p"] += 1
-                h["gf"] += hg; h["ga"] += ag; a["gf"] += ag; a["ga"] += hg
+                h["p"] += 1
+                a["p"] += 1
+                h["gf"] += hg
+                h["ga"] += ag
+                a["gf"] += ag
+                a["ga"] += hg
                 if hg > ag:
-                    h["w"] += 1; h["pts"] += 3; a["l"] += 1
+                    h["w"] += 1
+                    h["pts"] += 3
+                    a["l"] += 1
                 elif hg < ag:
-                    a["w"] += 1; a["pts"] += 3; h["l"] += 1
+                    a["w"] += 1
+                    a["pts"] += 3
+                    h["l"] += 1
                 else:
-                    h["d"] += 1; h["pts"] += 1; a["d"] += 1; a["pts"] += 1
+                    h["d"] += 1
+                    h["pts"] += 1
+                    a["d"] += 1
+                    a["pts"] += 1
                 key = home + "|" + away
-                if hg > ag: match_stats[g][key]["w"] += 1
-                elif hg < ag: match_stats[g][key]["l"] += 1
-                else: match_stats[g][key]["d"] += 1
-            for t in st.values(): t["gd"] = t["gf"] - t["ga"]
+                if hg > ag:
+                    match_stats[g][key]["w"] += 1
+                elif hg < ag:
+                    match_stats[g][key]["l"] += 1
+                else:
+                    match_stats[g][key]["d"] += 1
+            for t in st.values():
+                t["gd"] = t["gf"] - t["ga"]
             sl = sorted(st.values(), key=lambda x: (-x["pts"], -x["gd"], -x["gf"]))
-            for i, t in enumerate(sl): t["pos"] = i + 1
+            for i, t in enumerate(sl):
+                t["pos"] = i + 1
             sorted_groups[g] = sl
             for t in sl:
                 ts = team_stats[t["team"]]
-                ts["totalPoints"] += t["pts"]; ts["totalGoalsFor"] += t["gf"]
-                ts["totalGoalsAgainst"] += t["ga"]; ts["matchesPlayed"] += t["p"]
-                ts["totalWins"] += t["w"]; ts["totalDraws"] += t["d"]; ts["totalLosses"] += t["l"]
-                if t["pos"] == 1: ts["groupWinner"] += 1
-                elif t["pos"] == 2: ts["groupRunnerUp"] += 1
-                elif t["pos"] == 3: ts["groupThird"] += 1
-                else: ts["groupFourth"] += 1
+                ts["totalPoints"] += t["pts"]
+                ts["totalGoalsFor"] += t["gf"]
+                ts["totalGoalsAgainst"] += t["ga"]
+                ts["matchesPlayed"] += t["p"]
+                ts["totalWins"] += t["w"]
+                ts["totalDraws"] += t["d"]
+                ts["totalLosses"] += t["l"]
+                if t["pos"] == 1:
+                    ts["groupWinner"] += 1
+                elif t["pos"] == 2:
+                    ts["groupRunnerUp"] += 1
+                elif t["pos"] == 3:
+                    ts["groupThird"] += 1
+                else:
+                    ts["groupFourth"] += 1
 
         ko = sim_knockout(sorted_groups, bracket, elo_ratings, params, rng)
         for rn, matches in ko.items():
             for i, m in enumerate(matches):
                 key = rn + "_" + str(i)
                 if key not in ko_stats:
-                    ko_stats[key] = {"w": 0, "d": 0, "l": 0, "hg": 0, "ag": 0, "scorelines": {}}
+                    ko_stats[key] = {
+                        "w": 0,
+                        "d": 0,
+                        "l": 0,
+                        "hg": 0,
+                        "ag": 0,
+                        "scorelines": {},
+                    }
                 ks = ko_stats[key]
                 if m["home"] == "TBD" or m["away"] == "TBD":
                     continue
-                ks["hg"] += m["hg"]; ks["ag"] += m["ag"]
+                ks["hg"] += m["hg"]
+                ks["ag"] += m["ag"]
                 sl = str(m["hg"]) + "-" + str(m["ag"])
                 ks["scorelines"][sl] = ks["scorelines"].get(sl, 0) + 1
-                if m["hg"] > m["ag"]: ks["w"] += 1
-                elif m["hg"] < m["ag"]: ks["l"] += 1
-                else: ks["d"] += 1
+                if m["hg"] > m["ag"]:
+                    ks["w"] += 1
+                elif m["hg"] < m["ag"]:
+                    ks["l"] += 1
+                else:
+                    ks["d"] += 1
                 for tm in [m["home"], m["away"]]:
                     if tm in team_stats:
-                        if rn == "round_of_32": team_stats[tm]["round32"] += 1
-                        elif rn == "round_of_16": team_stats[tm]["round16"] += 1
-                        elif rn == "quarter_finals": team_stats[tm]["quarterfinalist"] += 1
-                        elif rn == "semi_finals": team_stats[tm]["semifinalist"] += 1
+                        if rn == "round_of_32":
+                            team_stats[tm]["round32"] += 1
+                        elif rn == "round_of_16":
+                            team_stats[tm]["round16"] += 1
+                        elif rn == "quarter_finals":
+                            team_stats[tm]["quarterfinalist"] += 1
+                        elif rn == "semi_finals":
+                            team_stats[tm]["semifinalist"] += 1
                 if rn == "final" and m["winner"]:
                     team_stats[m["winner"]]["champion"] += 1
                     team_stats[m["home"]]["finalist"] += 1
@@ -437,9 +627,23 @@ def run_simulation(data, n=10000):
             else:
                 ah, aa = float(m["hg"]), float(m["ag"])
                 winner = m["winner"]
-            avg_ko[rn].append({"home": m["home"], "away": m["away"], "winner": winner, "hg": round(ah, 1), "ag": round(aa, 1)})
+            avg_ko[rn].append(
+                {
+                    "home": m["home"],
+                    "away": m["away"],
+                    "winner": winner,
+                    "hg": round(ah, 1),
+                    "ag": round(aa, 1),
+                }
+            )
 
-    return {"N": n, "team_stats": team_stats, "match_stats": match_stats, "knockout_stats": ko_stats, "knockout_bracket": avg_ko}
+    return {
+        "N": n,
+        "team_stats": team_stats,
+        "match_stats": match_stats,
+        "knockout_stats": ko_stats,
+        "knockout_bracket": avg_ko,
+    }
 
 
 def compute_prob_history(data, played_results, n=10000):
@@ -461,7 +665,9 @@ def compute_prob_history(data, played_results, n=10000):
     sim = run_simulation(baseline, n)
     for t in data["teams"]:
         s = sim["team_stats"][t]
-        history["qualify"][t].append(round((s["groupWinner"] + s["groupRunnerUp"]) * 100, 1))
+        history["qualify"][t].append(
+            round((s["groupWinner"] + s["groupRunnerUp"]) * 100, 1)
+        )
         history["win"][t].append(round(s["champion"] * 100, 1))
     history["dates"].append("Baseline")
 
@@ -479,8 +685,11 @@ def compute_prob_history(data, played_results, n=10000):
                 "teams": GROUPS[g],
                 "matches": [
                     {
-                        "home": m["home"], "away": m["away"], "date": m["date"],
-                        "venue": m["venue"], "neutral": m["neutral"],
+                        "home": m["home"],
+                        "away": m["away"],
+                        "date": m["date"],
+                        "venue": m["venue"],
+                        "neutral": m["neutral"],
                         "home_score": m.get("home_score"),
                         "away_score": m.get("away_score"),
                     }
@@ -503,7 +712,9 @@ def compute_prob_history(data, played_results, n=10000):
         sim = run_simulation(date_data, n)
         for t in data["teams"]:
             s = sim["team_stats"][t]
-            history["qualify"][t].append(round((s["groupWinner"] + s["groupRunnerUp"]) * 100, 1))
+            history["qualify"][t].append(
+                round((s["groupWinner"] + s["groupRunnerUp"]) * 100, 1)
+            )
             history["win"][t].append(round(s["champion"] * 100, 1))
 
         history["dates"].append(date)
@@ -534,7 +745,9 @@ def main():
 
     print("Calibrating scoring model...")
     model_params = calibrate_model(RESULTS_FILE)
-    print(f"  base_rate={model_params['base_rate']:.2f}, scale={model_params['scale']}, home_adv={model_params['home_advantage']}")
+    print(
+        f"  base_rate={model_params['base_rate']:.2f}, scale={model_params['scale']}, home_adv={model_params['home_advantage']}"
+    )
 
     groups_output = {}
     for g in sorted(GROUPS.keys()):
@@ -543,8 +756,11 @@ def main():
             "teams": GROUPS[g],
             "matches": [
                 {
-                    "home": m["home"], "away": m["away"], "date": m["date"],
-                    "venue": m["venue"], "neutral": m["neutral"],
+                    "home": m["home"],
+                    "away": m["away"],
+                    "date": m["date"],
+                    "venue": m["venue"],
+                    "neutral": m["neutral"],
                     "home_score": m.get("home_score"),
                     "away_score": m.get("away_score"),
                 }
@@ -563,18 +779,24 @@ def main():
     print("Running simulation (10K iterations)...")
     sim = run_simulation(data, 10000)
     data["simulation"] = sim
-    print(f"  Done — champion prob range: {min(s['champion'] for s in sim['team_stats'].values()):.1%} – {max(s['champion'] for s in sim['team_stats'].values()):.1%}")
+    print(
+        f"  Done — champion prob range: {min(s['champion'] for s in sim['team_stats'].values()):.1%} – {max(s['champion'] for s in sim['team_stats'].values()):.1%}"
+    )
 
     print("Running baseline simulation (no played results)...")
     baseline_data = strip_played_results(data)
     baseline_sim = run_simulation(baseline_data, 10000)
     data["baseline_team_stats"] = baseline_sim["team_stats"]
-    print(f"  Done — baseline champion prob range: {min(s['champion'] for s in baseline_sim['team_stats'].values()):.1%} – {max(s['champion'] for s in baseline_sim['team_stats'].values()):.1%}")
+    print(
+        f"  Done — baseline champion prob range: {min(s['champion'] for s in baseline_sim['team_stats'].values()):.1%} – {max(s['champion'] for s in baseline_sim['team_stats'].values()):.1%}"
+    )
 
     print("Computing per-date probability history...")
     prob_history = compute_prob_history(data, played_results, 10000)
     data["prob_history"] = prob_history
-    print(f"  Done — {len(prob_history['dates'])} snapshots: {', '.join(prob_history['dates'])}")
+    print(
+        f"  Done — {len(prob_history['dates'])} snapshots: {', '.join(prob_history['dates'])}"
+    )
 
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
