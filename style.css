@@ -478,13 +478,55 @@ header .subtitle { color: #a6adc8; font-size: 0.95rem; margin-top: 0.25rem; }
 }
 .modal-table td {
     padding: 0.5rem 0.6rem;
-    border-bottom: 1px solid #1e1e2e;
 }
-.modal-table tr:last-child td { border-bottom: none; }
+.modal-table tbody tr:nth-child(even) { background: rgba(49, 50, 68, 0.4); }
 .modal-table .team-cell { font-weight: 600; }
 
-.match-cell { white-space: nowrap; }
+.match-cell { white-space: nowrap; display: flex; align-items: center; gap: 0.35rem; }
+.match-cell .match-vs { margin: 0 0.15rem; }
 .match-vs { color: #585b70; margin: 0 0.3rem; font-size: 0.8rem; }
+
+.team-color-sq {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+.color-home { background: rgb(137, 180, 250); }
+.color-away { background: rgb(243, 139, 168); }
+
+.prob-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: 0.5rem;
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: #6c7086;
+    vertical-align: middle;
+}
+.legend-sq {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 1px;
+    vertical-align: middle;
+}
+
+.legend-home { background: rgb(137, 180, 250); }
+.legend-away { background: rgb(243, 139, 168); }
+
+.homeaway-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-left: 0.4rem;
+    font-size: 0.6rem;
+    font-weight: 400;
+    color: #6c7086;
+    vertical-align: middle;
+}
 
 .prob-cell { display: flex; align-items: center; gap: 0.3rem; }
 .prob-bar {
@@ -547,6 +589,15 @@ header .subtitle { color: #a6adc8; font-size: 0.95rem; margin-top: 0.25rem; }
     font-size: 0.75rem;
     font-style: italic;
 }
+
+.prob-delta {
+    font-size: 0.75rem;
+    margin-left: 4px;
+    font-variant-numeric: tabular-nums;
+}
+.prob-delta.positive { color: #a6e3a1; }
+.prob-delta.negative { color: #f38ba8; }
+.prob-delta.neutral { color: #6c7086; }
 
 .bracket-match { transition: border-color 0.15s; }
 .bracket-match:hover { border-color: #89b4fa; }

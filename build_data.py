@@ -191,6 +191,17 @@ def calibrate_model(results_file):
     return best_params
 
 
+def strip_played_results(data):
+    """Deep-copy data and clear all played match scores for baseline simulation."""
+    import copy
+    d = copy.deepcopy(data)
+    for g, info in d["groups"].items():
+        for m in info["matches"]:
+            m["home_score"] = None
+            m["away_score"] = None
+    return d
+
+
 def hash_results_seed():
     """Hash results.json to produce a deterministic seed for the client-side PRNG."""
     if not PLAYED_FILE.exists():
@@ -478,6 +489,12 @@ def main():
     sim = run_simulation(data, 10000)
     data["simulation"] = sim
     print(f"  Done — champion prob range: {min(s['champion'] for s in sim['team_stats'].values()):.1%} – {max(s['champion'] for s in sim['team_stats'].values()):.1%}")
+
+    print("Running baseline simulation (no played results)...")
+    baseline_data = strip_played_results(data)
+    baseline_sim = run_simulation(baseline_data, 10000)
+    data["baseline_team_stats"] = baseline_sim["team_stats"]
+    print(f"  Done — baseline champion prob range: {min(s['champion'] for s in baseline_sim['team_stats'].values()):.1%} – {max(s['champion'] for s in baseline_sim['team_stats'].values()):.1%}")
 
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:

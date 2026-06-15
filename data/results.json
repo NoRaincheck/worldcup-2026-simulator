@@ -15,6 +15,7 @@
   ],
   "2026-06-14": [
     {"home": "Germany", "away": "Curaçao", "home_score": 7, "away_score": 1},
-    {"home": "Netherlands", "away": "Japan", "home_score": 2, "away_score": 2}
+    {"home": "Netherlands", "away": "Japan", "home_score": 2, "away_score": 2},
+    {"home": "Ivory Coast", "away": "Ecuador", "home_score": 1, "away_score": 0}
   ]
 }

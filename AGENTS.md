@@ -59,7 +59,7 @@ The ELO data uses "Czechia" but the fixture data uses "Czech Republic". The `NAM
 
 - **index.html**: Single file with Alpine.js (`x-data`, `x-for`, etc.). All simulation logic is inline `<script>`.
 - **No build tools**: Pure vanilla JS via Alpine.js CDN, no npm packages, no bundler.
-- **CSS**: Dark theme, responsive grid layout.
+- **CSS**: [Catppuccin Macchiato](https://catppuccin.com/) dark theme with these key colors: `#1e1e2e` (base bg), `#cdd6f4` (text), `#89b4fa` (accent blue), `#a6e3a1` (green), `#f38ba8` (red), `#f9e2af` (yellow), `#fab387` (peach). Use these when adding new UI elements.
 - **Python**: Standard library only for build script (csv, json, math).
 
 ## Simulation model

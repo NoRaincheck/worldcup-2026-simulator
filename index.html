@@ -131,8 +131,8 @@
                     <td x-text="(row.groupRunnerUp/N*100).toFixed(0) + '%'"></td>
                     <td x-text="(row.groupThird/N*100).toFixed(0) + '%'"></td>
                     <td x-text="(row.groupFourth/N*100).toFixed(0) + '%'"></td>
-                    <td class="pct-val" x-text="((row.groupWinner+row.groupRunnerUp)/N*100).toFixed(0) + '%'"></td>
-                    <td class="pct-val" x-text="(row.champion/N*100).toFixed(1) + '%'"></td>
+                    <td><span class="pct-val" x-text="((row.groupWinner+row.groupRunnerUp)/N*100).toFixed(0) + '%'"></span><span :class="'prob-delta ' + deltaClass(qualDelta(row.team))" x-show="deltaStr(qualDelta(row.team))" x-text="deltaStr(qualDelta(row.team))"></span></td>
+                    <td><span class="pct-val" x-text="(row.champion/N*100).toFixed(1) + '%'"></span><span :class="'prob-delta ' + deltaClass(delta(row.team, 'champion'))" x-show="deltaStr(delta(row.team, 'champion'))" x-text="deltaStr(delta(row.team, 'champion'))"></span></td>
                 </tr>
                 </template>
                 </tbody>
@@ -153,13 +153,15 @@
             <div class="modal-section">
                 <h3>Simulated Results</h3>
                 <table class="modal-table">
-                    <thead><tr><th>Match</th><th>Score</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Match <span class="homeaway-legend"><span class="legend-sq legend-home"></span>H <span class="legend-sq legend-away"></span>A</span></th><th>Score</th><th>Status</th></tr></thead>
                     <tbody>
                     <template x-for="m in simResultsForGroup(modalGroup)" :key="m.home + m.away">
                     <tr>
                         <td class="match-cell">
+                            <span class="team-color-sq color-home"></span>
                             <span x-text="m.home"></span>
                             <span class="match-vs">vs</span>
+                            <span class="team-color-sq color-away"></span>
                             <span x-text="m.away"></span>
                         </td>
                         <td class="score-cell">
@@ -178,13 +180,15 @@
             <div class="modal-section">
                 <h3>Edit Match Outcomes</h3>
                 <table class="modal-table">
-                    <thead><tr><th>Match</th><th colspan="3">Result Probabilities</th><th>Edit</th></tr></thead>
+                    <thead><tr><th>Match <span class="homeaway-legend"><span class="legend-sq legend-home"></span>H <span class="legend-sq legend-away"></span>A</span></th><th>Result</th></tr></thead>
                     <tbody>
                     <template x-for="m in groupMatches(modalGroup)" :key="m.home + m.away">
                     <tr>
                         <td class="match-cell">
+                            <span class="team-color-sq color-home"></span>
                             <span x-text="m.home"></span>
                             <span class="match-vs">vs</span>
+                            <span class="team-color-sq color-away"></span>
                             <span x-text="m.away"></span>
                         </td>
                         <td class="prob-cell">
@@ -367,6 +371,7 @@
                 "Zidane headbutt probability: negligible",
             ],
             stats: {},
+            baselineStats: {},
             matchStatsMap: {},
             qualProbs: [],
             qualFilter: null,
@@ -376,6 +381,7 @@
             knockoutStats: {},
             modalKnockout: null,
             editedKoScores: {},
+
             
             get filteredQualProbs() {
                 if (!this.qualFilter) return this.qualProbs;
@@ -410,6 +416,35 @@
                 if (this.qualSort !== col) return '';
                 return this.qualSortDesc ? 'desc' : 'asc';
             },
+
+            delta(team, field) {
+                const base = this.baselineStats[team];
+                if (!base) return 0;
+                const cur = this.stats[team]?.[field] ?? 0;
+                const n = this.N || 1;
+                return (cur / n - base[field]) * 100;
+            },
+
+            qualDelta(team) {
+                const base = this.baselineStats[team];
+                if (!base) return 0;
+                const cur = this.stats[team] || {};
+                const curPct = ((cur.groupWinner ?? 0) + (cur.groupRunnerUp ?? 0)) / (this.N || 1);
+                const basePct = (base.groupWinner ?? 0) + (base.groupRunnerUp ?? 0);
+                return (curPct - basePct) * 100;
+            },
+
+            deltaStr(d) {
+                if (Math.abs(d) < 0.1) return '';
+                return (d > 0 ? '+' : '') + d.toFixed(1) + '%';
+            },
+
+            deltaClass(d) {
+                if (d > 0.5) return 'positive';
+                if (d < -0.5) return 'negative';
+                return 'neutral';
+            },
+
             lastBrackets: null,
             lastGroupResults: null,
             lastSimResults: {},
@@ -422,6 +457,7 @@
                     const r = await fetch('data/simulation_data.json');
                     this.data = await r.json();
                     this.teams = this.data.teams;
+                    this.baselineStats = this.data.baseline_team_stats || {};
                     this._rng = this.mulberry32(this.data.seed || 0);
                     this.run();
                 } catch (e) {
