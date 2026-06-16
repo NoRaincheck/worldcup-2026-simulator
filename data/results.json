@@ -21,6 +21,7 @@
   ],
   "2026-06-15": [
     {"home": "Spain", "away": "Cape Verde", "home_score": 0, "away_score": 0},
-    {"home": "Belgium", "away": "Egypt", "home_score": 1, "away_score": 1}
+    {"home": "Belgium", "away": "Egypt", "home_score": 1, "away_score": 1},
+    {"home": "Saudi Arabia", "away": "Uruguay", "home_score": 1, "away_score": 1}
   ]
 }
