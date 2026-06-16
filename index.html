@@ -718,6 +718,7 @@
                     qualSort: "champion",
                     qualSortDesc: true,
                     expectedThirds: [],
+                    expectedBracket: null,
                     knockoutStats: {},
                     modalKnockout: null,
                     editedKoScores: {},
@@ -981,6 +982,106 @@
                         }
                         thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
                         return thirds.slice(0, 8).map((t) => t.team);
+                    },
+
+                    getExpectedGroupResults() {
+                        const gr = {};
+                        for (const g of this.groupLetters) {
+                            gr[g] = this.expectedGroup(g);
+                        }
+                        return gr;
+                    },
+
+                    computeExpectedBracket() {
+                        const gr = this.getExpectedGroupResults();
+                        const btp = this.expectedThirds.map(t => t.team);
+                        const resolve = (slot) => {
+                            if (slot.startsWith("1")) return gr[slot[1]]?.[0]?.team || null;
+                            if (slot.startsWith("2")) return gr[slot[1]]?.[1]?.team || null;
+                            if (slot.startsWith("3rd_")) {
+                                return btp[parseInt(slot.split("_")[1]) - 1] || null;
+                            }
+                            return null;
+                        };
+                        const koResult = (rn, i, home, away) => {
+                            const key = rn + "_" + i;
+                            const s = this.knockoutStats[key];
+                            if (s && (s.w || s.d || s.l)) {
+                                const n = s.w + s.d + s.l;
+                                const avgHg = s.hg / n, avgAg = s.ag / n;
+                                return {
+                                    home,
+                                    away,
+                                    winner: avgHg >= avgAg ? home : away,
+                                    hg: +avgHg.toFixed(1),
+                                    ag: +avgAg.toFixed(1),
+                                };
+                            }
+                            return { home, away, winner: null, hg: 0, ag: 0 };
+                        };
+                        const b = {};
+                        const rounds = [
+                            "round_of_32",
+                            "round_of_16",
+                            "quarter_finals",
+                            "semi_finals",
+                        ];
+                        for (const rn of rounds) {
+                            b[rn] = [];
+                            for (let i = 0; i < this.data.knockout_bracket[rn].length; i++) {
+                                const [hs, as] = this.data.knockout_bracket[rn][i];
+                                let home, away;
+                                if (
+                                    hs.startsWith("R") || hs.startsWith("QF") || hs.startsWith("SF")
+                                ) {
+                                    const pr = hs.startsWith("R32")
+                                        ? "round_of_32"
+                                        : hs.startsWith("R16")
+                                        ? "round_of_16"
+                                        : hs.startsWith("QF")
+                                        ? "quarter_finals"
+                                        : "semi_finals";
+                                    home = b[pr]?.[parseInt(hs.split("_M")[1]) - 1]?.winner || null;
+                                } else home = resolve(hs);
+                                if (
+                                    as.startsWith("R") || as.startsWith("QF") || as.startsWith("SF")
+                                ) {
+                                    const pr = as.startsWith("R32")
+                                        ? "round_of_32"
+                                        : as.startsWith("R16")
+                                        ? "round_of_16"
+                                        : as.startsWith("QF")
+                                        ? "quarter_finals"
+                                        : "semi_finals";
+                                    away = b[pr]?.[parseInt(as.split("_M")[1]) - 1]?.winner || null;
+                                } else away = resolve(as);
+                                if (!home || !away) {
+                                    b[rn].push({
+                                        home: home || "TBD",
+                                        away: away || "TBD",
+                                        winner: null,
+                                        hg: 0,
+                                        ag: 0,
+                                    });
+                                    continue;
+                                }
+                                b[rn].push(koResult(rn, i, home, away));
+                            }
+                        }
+                        const sf = b.semi_finals;
+                        b.final = [];
+                        if (sf?.length === 2 && sf[0].winner && sf[1].winner) {
+                            b.final.push(koResult("final", 0, sf[0].winner, sf[1].winner));
+                        } else {
+                            b.final.push({
+                                home: "TBD",
+                                away: "TBD",
+                                winner: null,
+                                hg: 0,
+                                ag: 0,
+                            });
+                        }
+                        return b;
                     },
 
                     simulateKnockout(gr, eloRatings) {
@@ -1255,26 +1356,12 @@
                             const b = this.computeKoBracket();
                             return b?.[round] || [];
                         }
-                        const last = this.lastBrackets?.[round] || [];
-                        return last.map((m, i) => {
-                            const s = this.knockoutStats[round + "_" + i];
-                            if (!s || (!s.w && !s.d && !s.l)) return m;
-                            const n = s.w + s.d + s.l;
-                            const avgHg = s.hg / n;
-                            const avgAg = s.ag / n;
-                            return {
-                                ...m,
-                                hg: +avgHg.toFixed(1),
-                                ag: +avgAg.toFixed(1),
-                                winner: avgHg >= avgAg ? m.home : m.away,
-                            };
-                        });
+                        return this.expectedBracket?.[round] || [];
                     },
 
                     computeKoBracket() {
-                        const gr = this.lastGroupResults;
-                        if (!gr) return this.lastBrackets;
-                        const btp = this.bestThirdPlace(gr);
+                        const gr = this.getExpectedGroupResults();
+                        const btp = this.expectedThirds.map(t => t.team);
                         const resolve = (slot) => {
                             if (slot.startsWith("1")) return gr[slot[1]]?.[0]?.team || null;
                             if (slot.startsWith("2")) return gr[slot[1]]?.[1]?.team || null;
@@ -1828,6 +1915,7 @@
                                         b.pts - a.pts || b.gd - a.gd || b.gf - a.gf
                                     );
                                     this.expectedThirds = thirds.slice(0, 8);
+                                    this.expectedBracket = this.computeExpectedBracket();
                                     this.done = true;
                                     this.running = false;
                                     resolve();
