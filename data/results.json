@@ -24,5 +24,8 @@
     {"home": "Belgium", "away": "Egypt", "home_score": 1, "away_score": 1},
     {"home": "Saudi Arabia", "away": "Uruguay", "home_score": 1, "away_score": 1},
     {"home": "Iran", "away": "New Zealand", "home_score": 2, "away_score": 2}
+  ],
+  "2026-06-16": [
+    {"home": "France", "away": "Senegal", "home_score": 3, "away_score": 1}
   ]
 }
