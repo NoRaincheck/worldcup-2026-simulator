@@ -2,6 +2,8 @@
 
 A static website that runs client-side Monte Carlo simulation of the 2026 FIFA World Cup, from group stage through knockout rounds, using ELO ratings and historical match data for calibration.
 
+![Global Football Tournament Data Simulator](Global_Football_Tournament_Data_Simulator.jpg)
+
 ## How it works
 
 1. **ELO-based Poisson model**: Match outcomes are predicted using team ELO ratings. The expected goals for each team follow a Poisson distribution where the rate parameter λ is derived from the ELO difference between the two teams.
