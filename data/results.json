@@ -34,6 +34,7 @@
   "2026-06-17": [
     {"home": "Portugal", "away": "DR Congo", "home_score": 1, "away_score": 1},
     {"home": "England", "away": "Croatia", "home_score": 4, "away_score": 2},
-    {"home": "Ghana", "away": "Pananma", "home_score": 1, "away_score": 2}
+    {"home": "Ghana", "away": "Pananma", "home_score": 1, "away_score": 2},
+    {"home": "Uzbekistan", "away": "Colombia", "home_score": 1, "away_score": 3}
   ]
 }
