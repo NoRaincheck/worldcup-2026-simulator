@@ -328,6 +328,72 @@ def apply_momentum(elo_ratings, home, away, hg, ag):
         elo_ratings[away] -= adj
 
 
+def sort_group(st, match_results):
+    """Sort group standings using FIFA tiebreakers including head-to-head.
+
+    Tiebreaking order:
+    1. Points (all group matches)
+    2. Goal difference (all group matches)
+    3. Goals scored (all group matches)
+    4. Points (head-to-head among tied teams)
+    5. Goal difference (head-to-head among tied teams)
+    6. Goals scored (head-to-head among tied teams)
+    """
+    teams = list(st.keys())
+    if len(teams) <= 1:
+        result = []
+        for idx, t in enumerate(teams):
+            entry = dict(st[t])
+            entry["pos"] = idx + 1
+            result.append(entry)
+        return result
+
+    def primary_key(team):
+        return (st[team]["pts"], st[team]["gd"], st[team]["gf"])
+
+    sorted_teams = sorted(teams, key=primary_key, reverse=True)
+
+    result = []
+    i = 0
+    while i < len(sorted_teams):
+        pk = primary_key(sorted_teams[i])
+        tied = []
+        while i < len(sorted_teams) and primary_key(sorted_teams[i]) == pk:
+            tied.append(sorted_teams[i])
+            i += 1
+
+        if len(tied) > 1:
+            h2h = {t: {"pts": 0, "gd": 0, "gf": 0} for t in tied}
+            for m in match_results:
+                home, away, hg, ag = m["home"], m["away"], m["hg"], m["ag"]
+                if home in h2h and away in h2h:
+                    if hg > ag:
+                        h2h[home]["pts"] += 3
+                    elif hg < ag:
+                        h2h[away]["pts"] += 3
+                    else:
+                        h2h[home]["pts"] += 1
+                        h2h[away]["pts"] += 1
+                    h2h[home]["gd"] += hg - ag
+                    h2h[home]["gf"] += hg
+                    h2h[away]["gd"] += ag - hg
+                    h2h[away]["gf"] += ag
+
+            def h2h_key(team):
+                return (h2h[team]["pts"], h2h[team]["gd"], h2h[team]["gf"])
+
+            tied.sort(key=h2h_key, reverse=True)
+
+        result.extend(tied)
+
+    sorted_st = []
+    for idx, team in enumerate(result):
+        entry = dict(st[team])
+        entry["pos"] = idx + 1
+        sorted_st.append(entry)
+    return sorted_st
+
+
 def best_third_from_standings(sorted_groups):
     thirds = []
     for g, st in sorted_groups.items():
@@ -503,6 +569,7 @@ def run_simulation(data, n=10000):
                 }
                 for t in info["teams"]
             }
+            group_results = []
             for m in info["matches"]:
                 home, away = m["home"], m["away"]
                 if m.get("home_score") is not None:
@@ -517,6 +584,7 @@ def run_simulation(data, n=10000):
                         away_team=away,
                     )
                 apply_momentum(elo_ratings, home, away, hg, ag)
+                group_results.append({"home": home, "away": away, "hg": hg, "ag": ag})
                 h, a = st[home], st[away]
                 h["p"] += 1
                 a["p"] += 1
@@ -546,7 +614,7 @@ def run_simulation(data, n=10000):
                     match_stats[g][key]["d"] += 1
             for t in st.values():
                 t["gd"] = t["gf"] - t["ga"]
-            sl = sorted(st.values(), key=lambda x: (-x["pts"], -x["gd"], -x["gf"]))
+            sl = sort_group(st, group_results)
             for i, t in enumerate(sl):
                 t["pos"] = i + 1
             sorted_groups[g] = sl

@@ -890,6 +890,56 @@
                         return { hg, ag };
                     },
 
+                    sortGroup(st, matchResults) {
+                        const teams = Object.keys(st);
+                        if (teams.length <= 1) {
+                            return teams.map((t, i) => ({ ...st[t], pos: i + 1 }));
+                        }
+                        const primary = (t) => [st[t].pts, st[t].gd, st[t].gf];
+                        const sorted = [...teams].sort((a, b) => {
+                            const pa = primary(a), pb = primary(b);
+                            for (let i = 0; i < 3; i++) {
+                                if (pa[i] !== pb[i]) return pb[i] - pa[i];
+                            }
+                            return 0;
+                        });
+                        const result = [];
+                        let i = 0;
+                        while (i < sorted.length) {
+                            const pk = primary(sorted[i]);
+                            const tied = [];
+                            while (i < sorted.length && primary(sorted[i]).every((v, j) => v === pk[j])) {
+                                tied.push(sorted[i]);
+                                i++;
+                            }
+                            if (tied.length > 1) {
+                                const h2h = {};
+                                for (const t of tied) h2h[t] = { pts: 0, gd: 0, gf: 0 };
+                                for (const m of matchResults) {
+                                    const { home, away, hg, ag } = m;
+                                    if (!(home in h2h) || !(away in h2h)) continue;
+                                    if (hg > ag) h2h[home].pts += 3;
+                                    else if (hg < ag) h2h[away].pts += 3;
+                                    else { h2h[home].pts += 1; h2h[away].pts += 1; }
+                                    h2h[home].gd += hg - ag;
+                                    h2h[home].gf += hg;
+                                    h2h[away].gd += ag - hg;
+                                    h2h[away].gf += ag;
+                                }
+                                const h2hKey = (t) => [h2h[t].pts, h2h[t].gd, h2h[t].gf];
+                                tied.sort((a, b) => {
+                                    const ha = h2hKey(a), hb = h2hKey(b);
+                                    for (let j = 0; j < 3; j++) {
+                                        if (ha[j] !== hb[j]) return hb[j] - ha[j];
+                                    }
+                                    return 0;
+                                });
+                            }
+                            result.push(...tied);
+                        }
+                        return result.map((t, i) => ({ ...st[t], pos: i + 1 }));
+                    },
+
                     simulateGroupStage() {
                         const res = {};
                         const ms = {};
@@ -915,6 +965,7 @@
                             }
                             ms[g] = {};
                             simResults[g] = [];
+                            const groupResults = [];
                             for (const m of gd.matches) {
                                 const key = m.home + "|" + m.away;
                                 let r;
@@ -931,6 +982,7 @@
                                         this.applyMomentum(eloRatings, m.home, m.away, r.hg, r.ag);
                                     }
                                 }
+                                groupResults.push({ home: m.home, away: m.away, hg: r.hg, ag: r.ag });
                                 simResults[g].push({
                                     home: m.home,
                                     away: m.away,
@@ -942,7 +994,6 @@
                                 if (r.hg > r.ag) ms[g][key].w++;
                                 else if (r.hg < r.ag) ms[g][key].l++;
                                 else ms[g][key].d++;
-
                                 const h = st[m.home], a = st[m.away];
                                 h.p++;
                                 a.p++;
@@ -966,10 +1017,7 @@
                                 }
                             }
                             for (const s of Object.values(st)) s.gd = s.gf - s.ga;
-                            const sorted = Object.values(st).sort((a, b) =>
-                                b.pts - a.pts || b.gd - a.gd || b.gf - a.gf
-                            );
-                            sorted.forEach((s, i) => s.pos = i + 1);
+                            const sorted = this.sortGroup(st, groupResults);
                             res[g] = sorted;
                         }
                         return { groups: res, matchStats: ms, simResults, eloRatings };
