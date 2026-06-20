@@ -44,6 +44,7 @@
     {"home": "Mexico", "away": "South Korea", "home_score": 1, "away_score": 0}
   ],
   "2026-06-19": [
-    {"home": "United States", "away": "Australia", "home_score": 2, "away_score": 0}
+    {"home": "United States", "away": "Australia", "home_score": 2, "away_score": 0},
+    {"home": "Scotland", "away": "Morocco", "home_score": 0, "away_score": 1}
   ]
 }
