@@ -50,6 +50,7 @@
     {"home": "Turkey", "away": "Paraguay", "home_score": 0, "away_score": 1}
   ],
   "2026-06-20": [
-    {"home": "Netherlands", "away": "Sweden", "home_score": 5, "away_score": 1}
+    {"home": "Netherlands", "away": "Sweden", "home_score": 5, "away_score": 1},
+    {"home": "Germany", "away": "Ivory Coast", "home_score": 2, "away_score": 1}
   ]
 }
