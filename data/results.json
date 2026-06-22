@@ -54,5 +54,10 @@
     {"home": "Germany", "away": "Ivory Coast", "home_score": 2, "away_score": 1},
     {"home": "Ecuador", "away": "Curaçao", "home_score": 0, "away_score": 0},
     {"home": "Tunisia", "away": "Japan", "home_score": 0, "away_score": 4}
+  ],
+  "2026-06-21": [
+    {"home": "Spain", "away": "Saudi Arabia", "home_score": 4, "away_score": 0},
+    {"home": "Belgium", "away": "Iran", "home_score": 0, "away_score": 0},
+    {"home": "Uruguay", "away": "Cape Verde", "home_score": 2, "away_score": 2}
   ]
 }
