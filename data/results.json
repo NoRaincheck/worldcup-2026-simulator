@@ -62,6 +62,8 @@
     {"home": "New Zealand", "away": "Egypt", "home_score": 1, "away_score": 3}
   ],
   "2026-06-22": [
-    {"home": "Argentina", "away": "Austria", "home_score": 2, "away_score": 0}
+    {"home": "Argentina", "away": "Austria", "home_score": 2, "away_score": 0},
+    {"home": "France", "away": "Iraq", "home_score": 3, "away_score": 0},
+    {"home": "Norway", "away": "Senegal", "home_score": 3, "away_score": 2}
   ]
 }
