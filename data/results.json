@@ -74,11 +74,11 @@
     {"home": "Colombia", "away": "DR Congo", "home_score": 1, "away_score": 1}
   ],
   "2026-06-24": [
-    {"home": "Switzerland", "away": "Canada", "home_score": 2, "away_score": 1},
+    {"home": "Canada", "away": "Switzerland", "home_score": 1, "away_score": 2},
     {"home": "Bosnia and Herzegovina", "away": "Qatar", "home_score": 3, "away_score": 1},
     {"home": "Morocco", "away": "Haiti", "home_score": 4, "away_score": 2},
     {"home": "Scotland", "away": "Brazil", "home_score": 0, "away_score": 3},
-    {"home": "Czech Republic", "away": "Mexico", "home_score": 0, "away_score": 3},
+    {"home": "Mexico", "away": "Czech Republic", "home_score": 3, "away_score": 0},
     {"home": "South Africa", "away": "South Korea", "home_score": 1, "away_score": 0}
   ]
 }
