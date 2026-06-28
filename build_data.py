@@ -35,20 +35,20 @@ HOSTS = {"Mexico", "United States", "Canada"}
 KNOCKOUT_BRACKET = {
     "round_of_32": [
         ["2A", "2B"],
-        ["1E", "3rd_1"],
+        ["1E", "3D"],
         ["1F", "2C"],
         ["1C", "2F"],
-        ["1I", "3rd_2"],
+        ["1I", "3F"],
         ["2E", "2I"],
-        ["1A", "3rd_3"],
-        ["1L", "3rd_4"],
-        ["1D", "3rd_5"],
-        ["1G", "3rd_6"],
+        ["1A", "3E"],
+        ["1L", "3K"],
+        ["1D", "3B"],
+        ["1G", "3I"],
         ["2K", "2L"],
         ["1H", "2J"],
-        ["1B", "3rd_7"],
+        ["1B", "3J"],
         ["1J", "2H"],
-        ["1K", "3rd_8"],
+        ["1K", "3L"],
         ["2D", "2G"],
     ],
     "round_of_16": [
@@ -430,9 +430,13 @@ def sim_knockout(sorted_groups, bracket, elo_ratings, params, rng):
                 if g in sorted_groups and len(sorted_groups[g]) > 1
                 else None
             )
-        if slot.startswith("3rd_"):
-            idx = int(slot.split("_")[1]) - 1
-            return btp[idx]["team"] if idx < len(btp) else None
+        if len(slot) == 2 and slot[0] == "3" and slot[1].isalpha():
+            g = slot[1]
+            return (
+                sorted_groups[g][2]["team"]
+                if g in sorted_groups and len(sorted_groups[g]) > 2
+                else None
+            )
         return None
 
     b = {}

@@ -1042,12 +1042,11 @@
 
                     computeExpectedBracket() {
                         const gr = this.getExpectedGroupResults();
-                        const btp = this.expectedThirds.map(t => t.team);
                         const resolve = (slot) => {
                             if (slot.startsWith("1")) return gr[slot[1]]?.[0]?.team || null;
                             if (slot.startsWith("2")) return gr[slot[1]]?.[1]?.team || null;
-                            if (slot.startsWith("3rd_")) {
-                                return btp[parseInt(slot.split("_")[1]) - 1] || null;
+                            if (slot.length === 2 && slot[0] === "3" && /[A-L]/.test(slot[1])) {
+                                return gr[slot[1]]?.[2]?.team || null;
                             }
                             return null;
                         };
@@ -1133,12 +1132,11 @@
                     },
 
                     simulateKnockout(gr, eloRatings) {
-                        const btp = this.bestThirdPlace(gr);
                         const resolve = (slot) => {
                             if (slot.startsWith("1")) return gr[slot[1]]?.[0]?.team || null;
                             if (slot.startsWith("2")) return gr[slot[1]]?.[1]?.team || null;
-                            if (slot.startsWith("3rd_")) {
-                                return btp[parseInt(slot.split("_")[1]) - 1] || null;
+                            if (slot.length === 2 && slot[0] === "3" && /[A-L]/.test(slot[1])) {
+                                return gr[slot[1]]?.[2]?.team || null;
                             }
                             return null;
                         };
@@ -1409,12 +1407,11 @@
 
                     computeKoBracket() {
                         const gr = this.getExpectedGroupResults();
-                        const btp = this.expectedThirds.map(t => t.team);
                         const resolve = (slot) => {
                             if (slot.startsWith("1")) return gr[slot[1]]?.[0]?.team || null;
                             if (slot.startsWith("2")) return gr[slot[1]]?.[1]?.team || null;
-                            if (slot.startsWith("3rd_")) {
-                                return btp[parseInt(slot.split("_")[1]) - 1] || null;
+                            if (slot.length === 2 && slot[0] === "3" && /[A-L]/.test(slot[1])) {
+                                return gr[slot[1]]?.[2]?.team || null;
                             }
                             return null;
                         };
