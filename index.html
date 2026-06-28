@@ -799,6 +799,7 @@
                     lastGroupResults: null,
                     lastSimResults: {},
                     groupLetters: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"],
+                    qualifyingThirdGroups: new Set(["B", "D", "E", "F", "I", "J", "K", "L"]),
                     modalGroup: null,
                     editedScores: {},
 
@@ -1026,10 +1027,12 @@
                     bestThirdPlace(gr) {
                         const thirds = [];
                         for (const [g, st] of Object.entries(gr)) {
-                            thirds.push({ ...st.find((s) => s.pos === 3), group: g });
+                            if (!this.qualifyingThirdGroups.has(g)) continue;
+                            const row = st.find((s) => s.pos === 3);
+                            if (row) thirds.push({ ...row, group: g });
                         }
                         thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
-                        return thirds.slice(0, 8).map((t) => t.team);
+                        return thirds.map((t) => t.team);
                     },
 
                     getExpectedGroupResults() {
@@ -1953,13 +1956,14 @@
                                     })).sort((a, b) => b.champion - a.champion);
                                     const thirds = [];
                                     for (const g of this.groupLetters) {
+                                        if (!this.qualifyingThirdGroups.has(g)) continue;
                                         const rows = this.expectedGroup(g);
                                         if (rows[2]) thirds.push({ ...rows[2], group: g });
                                     }
                                     thirds.sort((a, b) =>
                                         b.pts - a.pts || b.gd - a.gd || b.gf - a.gf
                                     );
-                                    this.expectedThirds = thirds.slice(0, 8);
+                                    this.expectedThirds = thirds;
                                     this.expectedBracket = this.computeExpectedBracket();
                                     this.done = true;
                                     this.running = false;

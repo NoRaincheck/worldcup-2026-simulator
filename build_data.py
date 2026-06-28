@@ -32,6 +32,10 @@ ELO_TO_FIXTURE = {v: k for k, v in NAME_MAP.items()}
 
 HOSTS = {"Mexico", "United States", "Canada"}
 
+# The eight groups whose third-place teams qualify for the round of 32.
+# Source: https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_knockout_stage
+QUALIFYING_THIRD_GROUPS = {"B", "D", "E", "F", "I", "J", "K", "L"}
+
 KNOCKOUT_BRACKET = {
     "round_of_32": [
         ["2A", "2B"],
@@ -397,7 +401,7 @@ def sort_group(st, match_results):
 def best_third_from_standings(sorted_groups):
     thirds = []
     for g, st in sorted_groups.items():
-        if len(st) >= 3:
+        if g in QUALIFYING_THIRD_GROUPS and len(st) >= 3:
             t = st[2]
             thirds.append(
                 {
@@ -409,7 +413,7 @@ def best_third_from_standings(sorted_groups):
                 }
             )
     thirds.sort(key=lambda x: (-x["pts"], -x["gd"], -x["gf"]))
-    return thirds[:8]
+    return thirds
 
 
 def sim_knockout(sorted_groups, bracket, elo_ratings, params, rng):
