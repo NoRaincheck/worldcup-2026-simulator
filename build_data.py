@@ -89,6 +89,23 @@ def load_played_results():
         return json.load(f)
 
 
+def load_played_knockouts(played_results):
+    """Extract knockout stage results from played_results dict.
+
+    Knockout results are keyed by date >= 2026-06-28 (after group stage ends).
+    Returns a dict mapping (home, away) -> (home_score, away_score).
+    """
+    knockouts = {}
+    knockout_start = "2026-06-28"
+    for date, matches in played_results.items():
+        if date < knockout_start:
+            continue
+        for m in matches:
+            key = (m["home"], m["away"])
+            knockouts[key] = (m["home_score"], m["away_score"])
+    return knockouts
+
+
 def load_elo_ratings():
     all_fixture_names = {t for group in GROUPS.values() for t in group}
     elo_name_to_fixture_map = {}
@@ -416,8 +433,10 @@ def best_third_from_standings(sorted_groups):
     return thirds
 
 
-def sim_knockout(sorted_groups, bracket, elo_ratings, params, rng):
+def sim_knockout(sorted_groups, bracket, elo_ratings, params, rng, played_knockouts=None):
     btp = best_third_from_standings(sorted_groups)
+    if played_knockouts is None:
+        played_knockouts = {}
 
     def resolve(slot):
         if slot.startswith("1"):
@@ -488,15 +507,20 @@ def sim_knockout(sorted_groups, bracket, elo_ratings, params, rng):
                     }
                 )
                 continue
-            hg, ag = sim_match(
-                elo_ratings[home],
-                elo_ratings[away],
-                params,
-                rng,
-                True,
-                home_team=home,
-                away_team=away,
-            )
+            # Check for played knockout result
+            played_key = (home, away)
+            if played_key in played_knockouts:
+                hg, ag = played_knockouts[played_key]
+            else:
+                hg, ag = sim_match(
+                    elo_ratings[home],
+                    elo_ratings[away],
+                    params,
+                    rng,
+                    True,
+                    home_team=home,
+                    away_team=away,
+                )
             apply_momentum(elo_ratings, home, away, hg, ag)
             b[rn].append(
                 {
@@ -522,12 +546,14 @@ def sim_knockout(sorted_groups, bracket, elo_ratings, params, rng):
     return b
 
 
-def run_simulation(data, n=10000):
+def run_simulation(data, n=10000, played_knockouts=None):
     teams = data["teams"]
     params = data["model_params"]
     bracket = data["knockout_bracket"]
     seed = data["seed"]
     rng = random.Random(seed)
+    if played_knockouts is None:
+        played_knockouts = {}
 
     team_stats = {
         t: {
@@ -644,7 +670,7 @@ def run_simulation(data, n=10000):
                 else:
                     ts["groupFourth"] += 1
 
-        ko = sim_knockout(sorted_groups, bracket, elo_ratings, params, rng)
+        ko = sim_knockout(sorted_groups, bracket, elo_ratings, params, rng, played_knockouts)
         for rn, matches in ko.items():
             for i, m in enumerate(matches):
                 key = rn + "_" + str(i)
@@ -738,7 +764,7 @@ def compute_prob_history(data, played_results, n=10000):
     # Baseline (no results played)
     baseline = strip_played_results(data)
     baseline["seed"] = 0
-    sim = run_simulation(baseline, n)
+    sim = run_simulation(baseline, n, {})
     for t in data["teams"]:
         s = sim["team_stats"][t]
         history["qualify"][t].append(
@@ -785,7 +811,7 @@ def compute_prob_history(data, played_results, n=10000):
             "seed": date_seed,
         }
 
-        sim = run_simulation(date_data, n)
+        sim = run_simulation(date_data, n, {})
         for t in data["teams"]:
             s = sim["team_stats"][t]
             history["qualify"][t].append(
@@ -807,6 +833,11 @@ def main():
     played_results = load_played_results()
     played_count = sum(len(v) for v in played_results.values())
     print(f"  {played_count} matches already played")
+
+    print("Loading played knockout results...")
+    played_knockouts = load_played_knockouts(played_results)
+    ko_count = len(played_knockouts)
+    print(f"  {ko_count} knockout matches already played")
 
     print("Computing RNG seed from results.json...")
     seed = hash_results_seed()
@@ -853,7 +884,7 @@ def main():
     }
 
     print("Running simulation (10K iterations)...")
-    sim = run_simulation(data, 10000)
+    sim = run_simulation(data, 10000, played_knockouts)
     data["simulation"] = sim
     print(
         f"  Done — champion prob range: {min(s['champion'] for s in sim['team_stats'].values()):.1%} – {max(s['champion'] for s in sim['team_stats'].values()):.1%}"
@@ -861,7 +892,7 @@ def main():
 
     print("Running baseline simulation (no played results)...")
     baseline_data = strip_played_results(data)
-    baseline_sim = run_simulation(baseline_data, 10000)
+    baseline_sim = run_simulation(baseline_data, 10000, {})
     data["baseline_team_stats"] = baseline_sim["team_stats"]
     print(
         f"  Done — baseline champion prob range: {min(s['champion'] for s in baseline_sim['team_stats'].values()):.1%} – {max(s['champion'] for s in baseline_sim['team_stats'].values()):.1%}"
