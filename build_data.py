@@ -93,7 +93,8 @@ def load_played_knockouts(played_results):
     """Extract knockout stage results from played_results dict.
 
     Knockout results are keyed by date >= 2026-06-28 (after group stage ends).
-    Returns a dict mapping (home, away) -> (home_score, away_score).
+    Returns a dict mapping (home, away) -> (home_score, away_score, penalty_winner).
+    penalty_winner is None if no penalties, or 'home'/'away'.
     """
     knockouts = {}
     knockout_start = "2026-06-28"
@@ -102,7 +103,7 @@ def load_played_knockouts(played_results):
             continue
         for m in matches:
             key = (m["home"], m["away"])
-            knockouts[key] = (m["home_score"], m["away_score"])
+            knockouts[key] = (m["home_score"], m["away_score"], m.get("penalty_winner"))
     return knockouts
 
 
@@ -510,8 +511,9 @@ def sim_knockout(sorted_groups, bracket, elo_ratings, params, rng, played_knocko
             # Check for played knockout result
             played_key = (home, away)
             if played_key in played_knockouts:
-                hg, ag = played_knockouts[played_key]
+                hg, ag, penalty_winner = played_knockouts[played_key]
             else:
+                penalty_winner = None
                 hg, ag = sim_match(
                     elo_ratings[home],
                     elo_ratings[away],
@@ -522,11 +524,15 @@ def sim_knockout(sorted_groups, bracket, elo_ratings, params, rng, played_knocko
                     away_team=away,
                 )
             apply_momentum(elo_ratings, home, away, hg, ag)
+            if hg == ag and penalty_winner:
+                winner = home if penalty_winner == "home" else away
+            else:
+                winner = home if hg >= ag else away
             b[rn].append(
                 {
                     "home": home,
                     "away": away,
-                    "winner": home if hg >= ag else away,
+                    "winner": winner,
                     "hg": hg,
                     "ag": ag,
                 }
