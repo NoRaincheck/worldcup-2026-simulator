@@ -146,7 +146,7 @@
                                             >
                                                 <span class="team-name" x-text="m.home"></span><span
                                                     class="score"
-                                                    x-text="m.hg"
+                                                    x-text="koScoreDisplay(m, 'home')"
                                                 ></span>
                                             </div>
                                             <div
@@ -155,7 +155,7 @@
                                             >
                                                 <span class="team-name" x-text="m.away"></span><span
                                                     class="score"
-                                                    x-text="m.ag"
+                                                    x-text="koScoreDisplay(m, 'away')"
                                                 ></span>
                                             </div>
                                         </div>
@@ -1059,12 +1059,22 @@
                             if (s && (s.w || s.d || s.l)) {
                                 const n = s.w + s.d + s.l;
                                 const avgHg = s.hg / n, avgAg = s.ag / n;
+                                const pw = s.pw || 0, pl = s.pl || 0;
+                                let winner;
+                                if (avgHg > avgAg) {
+                                    winner = home;
+                                } else if (avgHg < avgAg) {
+                                    winner = away;
+                                } else {
+                                    winner = (pw + pl > 0) ? (pw > pl ? home : away) : home;
+                                }
                                 return {
                                     home,
                                     away,
-                                    winner: avgHg >= avgAg ? home : away,
+                                    winner,
                                     hg: +avgHg.toFixed(1),
                                     ag: +avgAg.toFixed(1),
+                                    penalty_winner: (pw + pl > 0) ? (pw > pl ? "home" : "away") : null,
                                 };
                             }
                             return { home, away, winner: null, hg: 0, ag: 0 };
@@ -1143,6 +1153,10 @@
                             }
                             return null;
                         };
+                        const playedKO = {};
+                        for (const pk of (this.data.played_knockouts || [])) {
+                            playedKO[pk.home + "|" + pk.away] = pk;
+                        }
                         const b = {};
                         const rounds = [
                             "round_of_32",
@@ -1188,15 +1202,27 @@
                                     });
                                     continue;
                                 }
-                                const r = this.simulateMatch(home, away, true, eloRatings);
-                                this.applyMomentum(eloRatings, home, away, r.hg, r.ag);
-                                b[rn].push({
-                                    home,
-                                    away,
-                                    winner: r.hg >= r.ag ? home : away,
-                                    hg: r.hg,
-                                    ag: r.ag,
-                                });
+                                const pk = playedKO[home + "|" + away];
+                                let hg, ag, winner, penaltyWinner = null;
+                                if (pk) {
+                                    hg = pk.home_score;
+                                    ag = pk.away_score;
+                                    if (hg === ag && pk.penalty_winner) {
+                                        penaltyWinner = pk.penalty_winner;
+                                        winner = pk.penalty_winner === "home" ? home : away;
+                                    } else {
+                                        winner = hg >= ag ? home : away;
+                                    }
+                                } else {
+                                    const r = this.simulateMatch(home, away, true, eloRatings);
+                                    hg = r.hg;
+                                    ag = r.ag;
+                                    winner = hg >= ag ? home : away;
+                                }
+                                if (!penaltyWinner) {
+                                    this.applyMomentum(eloRatings, home, away, hg, ag);
+                                }
+                                b[rn].push({ home, away, winner, hg, ag, penalty_winner: penaltyWinner });
                             }
                         }
                         const sf = b.semi_finals;
@@ -1433,12 +1459,22 @@
                             if (s && (s.w || s.d || s.l)) {
                                 const n = s.w + s.d + s.l;
                                 const avgHg = s.hg / n, avgAg = s.ag / n;
+                                const pw = s.pw || 0, pl = s.pl || 0;
+                                let winner;
+                                if (avgHg > avgAg) {
+                                    winner = home;
+                                } else if (avgHg < avgAg) {
+                                    winner = away;
+                                } else {
+                                    winner = (pw + pl > 0) ? (pw > pl ? home : away) : home;
+                                }
                                 return {
                                     home,
                                     away,
-                                    winner: avgHg >= avgAg ? home : away,
+                                    winner,
                                     hg: +avgHg.toFixed(1),
                                     ag: +avgAg.toFixed(1),
+                                    penalty_winner: (pw + pl > 0) ? (pw > pl ? "home" : "away") : null,
                                 };
                             }
                             return { home, away, winner: null, hg: 0, ag: 0 };
@@ -1514,6 +1550,16 @@
                             "semi_finals": "Semi-Finals",
                             "final": "Final",
                         }[rn] || rn;
+                    },
+
+                    koScoreDisplay(m, side) {
+                        const goals = side === "home" ? m.hg : m.ag;
+                        const pw = m.penalty_winner;
+                        if (!pw) return String(goals);
+                        if ((side === "home" && pw === "home") || (side === "away" && pw === "away")) {
+                            return goals + " (W)";
+                        }
+                        return goals + " (L)";
                     },
 
                     groupMatches(g) {
@@ -1885,7 +1931,11 @@
                                             ks.scorelines[sl] = (ks.scorelines[sl] || 0) + 1;
                                             if (m.hg > m.ag) ks.w++;
                                             else if (m.hg < m.ag) ks.l++;
-                                            else ks.d++;
+                                            else {
+                                                ks.d++;
+                                                if (m.winner === m.home) ks.pw = (ks.pw || 0) + 1;
+                                                else ks.pl = (ks.pl || 0) + 1;
+                                            }
                                         }
                                     }
                                     const rounds = [

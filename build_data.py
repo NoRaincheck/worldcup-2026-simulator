@@ -523,10 +523,10 @@ def sim_knockout(sorted_groups, bracket, elo_ratings, params, rng, played_knocko
                     home_team=home,
                     away_team=away,
                 )
-            apply_momentum(elo_ratings, home, away, hg, ag)
             if hg == ag and penalty_winner:
                 winner = home if penalty_winner == "home" else away
             else:
+                apply_momentum(elo_ratings, home, away, hg, ag)
                 winner = home if hg >= ag else away
             b[rn].append(
                 {
@@ -535,6 +535,7 @@ def sim_knockout(sorted_groups, bracket, elo_ratings, params, rng, played_knocko
                     "winner": winner,
                     "hg": hg,
                     "ag": ag,
+                    "penalty_winner": penalty_winner,
                 }
             )
     sf = b.get("semi_finals", [])
@@ -702,6 +703,10 @@ def run_simulation(data, n=10000, played_knockouts=None):
                     ks["l"] += 1
                 else:
                     ks["d"] += 1
+                    if m["winner"] == m["home"]:
+                        ks["pw"] = ks.get("pw", 0) + 1
+                    else:
+                        ks["pl"] = ks.get("pl", 0) + 1
                 for tm in [m["home"], m["away"]]:
                     if tm in team_stats:
                         if rn == "round_of_32":
@@ -731,10 +736,22 @@ def run_simulation(data, n=10000, played_knockouts=None):
             if total > 0:
                 ah = ks["hg"] / total
                 aa = ks["ag"] / total
-                winner = m["home"] if ah >= aa else m["away"]
+                if ah > aa:
+                    winner = m["home"]
+                elif ah < aa:
+                    winner = m["away"]
+                else:
+                    pw = ks.get("pw", 0)
+                    pl = ks.get("pl", 0)
+                    if pw + pl > 0:
+                        winner = m["home"] if pw > pl else m["away"]
+                    else:
+                        winner = m["home"]
             else:
                 ah, aa = float(m["hg"]), float(m["ag"])
                 winner = m["winner"]
+            pw = ks.get("pw", 0)
+            pl = ks.get("pl", 0)
             avg_ko[rn].append(
                 {
                     "home": m["home"],
@@ -742,6 +759,7 @@ def run_simulation(data, n=10000, played_knockouts=None):
                     "winner": winner,
                     "hg": round(ah, 1),
                     "ag": round(aa, 1),
+                    "penalty_winner": "home" if pw > pl else ("away" if pl > pw else None),
                 }
             )
 
@@ -887,6 +905,10 @@ def main():
         "knockout_bracket": KNOCKOUT_BRACKET,
         "model_params": model_params,
         "seed": seed,
+        "played_knockouts": [
+            {"home": k[0], "away": k[1], "home_score": v[0], "away_score": v[1], "penalty_winner": v[2]}
+            for k, v in played_knockouts.items()
+        ],
     }
 
     print("Running simulation (10K iterations)...")
