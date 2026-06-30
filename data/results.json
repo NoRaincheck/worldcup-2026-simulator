@@ -107,5 +107,10 @@
   ],
   "2026-06-28": [
     {"home": "South Africa", "away": "Canada", "home_score": 0, "away_score": 1}
+  ],
+  "2026-06-29": [
+    {"home": "Brazil", "away": "Japan", "home_score": 2, "away_score": 1},
+    {"home": "Germany", "away": "Paraguay", "home_score": 1, "away_score": 1},
+    {"home": "Netherlands", "away": "Morocco", "home_score": 1, "away_score": 1}
   ]
 }
