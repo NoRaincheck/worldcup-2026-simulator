@@ -112,5 +112,10 @@
     {"home": "Brazil", "away": "Japan", "home_score": 2, "away_score": 1},
     {"home": "Germany", "away": "Paraguay", "home_score": 1, "away_score": 1, "penalty_winner": "away"},
     {"home": "Netherlands", "away": "Morocco", "home_score": 1, "away_score": 1, "penalty_winner": "away"}
+  ],
+  "2026-06-30": [
+    {"home": "Ivory Coast", "away": "Norway", "home_score": 1, "away_score": 2},
+    {"home": "France", "away": "Sweden", "home_score": 3, "away_score": 0},
+    {"home": "Mexico", "away": "Ecuador", "home_score": 2, "away_score": 0}
   ]
 }
