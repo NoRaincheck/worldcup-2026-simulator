@@ -117,5 +117,10 @@
     {"home": "Ivory Coast", "away": "Norway", "home_score": 1, "away_score": 2},
     {"home": "France", "away": "Sweden", "home_score": 3, "away_score": 0},
     {"home": "Mexico", "away": "Ecuador", "home_score": 2, "away_score": 0}
+  ],
+  "2026-07-02": [
+    {"home": "England", "away": "DR Congo", "home_score": 2, "away_score": 1},
+    {"home": "Belgium", "away": "Senegal", "home_score": 3, "away_score": 2},
+    {"home": "United States", "away": "Bosnia and Herzegovina", "home_score": 2, "away_score": 0}
   ]
 }
